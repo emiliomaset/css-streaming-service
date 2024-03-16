@@ -2,7 +2,7 @@ package com.example.clientserverfinalproject;
 
 import java.io.*;
 
-public class Song {
+public class Song implements Serializable {
     private String songTitle;
     private String artist;
     private File mp3File;

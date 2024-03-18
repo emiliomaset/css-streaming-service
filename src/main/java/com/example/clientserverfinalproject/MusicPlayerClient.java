@@ -15,14 +15,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
+
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -30,18 +28,15 @@ public class MusicPlayerClient extends Application {
 
     private static InetAddress host;
     private static final int PORT = 4321;
-    private static Scanner userInput;
     private static ObjectOutputStream objectOutputStream;
     private static ObjectInputStream objectInputStream;
 
-
     private static Scene scene;
-    private static StackPane musicBarStackPane;
 
     private static MediaPlayer mediaPlayer;
+    private static File mp3FileChosenByUser;
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-
         try {
             host = InetAddress.getLocalHost();
         }
@@ -53,7 +48,6 @@ public class MusicPlayerClient extends Application {
         try {
             Socket socket = null;
             socket = new Socket(host, PORT);
-            userInput = new Scanner(System.in);
             objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             objectInputStream = new ObjectInputStream(socket.getInputStream());
         }
@@ -61,15 +55,11 @@ public class MusicPlayerClient extends Application {
             ioEx.printStackTrace();
         }
 
-        Song received = (Song) objectInputStream.readObject();
-
-        Media hit = new Media(received.getMp3File().toURI().toString());
-        mediaPlayer = new MediaPlayer(hit);
         launch(args);
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
 
         Button playButton = new Button("Play");
         playButton.setOnAction(e -> playSong());
@@ -80,16 +70,7 @@ public class MusicPlayerClient extends Application {
         Button addSongButton = new Button("Add song");
         addSongButton.setOnAction(e -> addSongMenuCreator());
 
-
-//        Rectangle musicBar = new Rectangle();
-//        musicBar.setFill(Color.BLUE);
-//        musicBar.setX(100);
-//        musicBar.setY(100);
-//        musicBar.setWidth(100);
-//        musicBar.setHeight(55); // good
-
         VBox vBox = new VBox(playButton, pauseButton, addSongButton);
-
 
         scene = new Scene(vBox);
         primaryStage.setScene(scene);
@@ -108,6 +89,7 @@ public class MusicPlayerClient extends Application {
     }
 
     public void addSongMenuCreator() {
+
         Stage addSongStage = new Stage();
         addSongStage.setTitle("add song to library");
 
@@ -125,13 +107,50 @@ public class MusicPlayerClient extends Application {
             @Override
             public void handle(MouseEvent mouseEvent) {
                 FileChooser mp3FileChooser = new FileChooser();
-                File mp3FileChosenByUser = mp3FileChooser.showOpenDialog(addSongStage);
+                mp3FileChosenByUser = mp3FileChooser.showOpenDialog(addSongStage);
+                mp3FileTextField.setText(mp3FileChosenByUser.getName());
+                mp3FileTextField.setEditable(false);
             }
         });
-        VBox addSongTextFieldsAndFileChooser = new VBox(songTitleTextField, artistNameTextField, mp3FileTextField);
+
+        Button addSongButton = new Button("add");
+        Label messageSentLabel = new Label();
+        addSongButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+//                if (songTitleTextField.getText().isEmpty()) {
+//                    songTitleTextField.setBorder(Border.stroke(Color.RED));
+//                }
+//                if (artistNameTextField.getText().isEmpty()) {
+//                    artistNameTextField.setBorder(Border.stroke(Color.RED));
+//                }
+//                if (mp3FileTextField.getText().isEmpty()) {
+//                    mp3FileTextField.setBorder(Border.stroke(Color.RED));
+//                }
+//
+//                if(songTitleTextField.getText().isEmpty() || artistNameTextField.getText().isEmpty() || mp3FileTextField.getText().isEmpty())
+//                    return;
+
+                Song songBeingSent = new Song(songTitleTextField.getText(), artistNameTextField.getText(), mp3FileChosenByUser);
+
+                try {
+                    objectOutputStream.writeObject(songBeingSent);
+                }
+                catch (IOException e) {
+                    messageSentLabel.setText("Song could not be added!");
+                    throw new RuntimeException(e);
+                }
+
+                messageSentLabel.setText("song successfully added to library!");
+
+            }
+        });
+
+
+        VBox addSongTextFieldsAndFileChooser = new VBox(songTitleTextField, artistNameTextField, mp3FileTextField, messageSentLabel);
         addSongTextFieldsAndFileChooser.setAlignment(Pos.CENTER_RIGHT);
 
-        HBox hbox = new HBox(addSongLabels, addSongTextFieldsAndFileChooser);
+        HBox hbox = new HBox(addSongLabels, addSongTextFieldsAndFileChooser, addSongButton);
         hbox.setAlignment(Pos.CENTER);
 
         Scene addSongScene = new Scene(hbox);

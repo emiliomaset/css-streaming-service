@@ -3,11 +3,10 @@ package com.example.clientserverfinalproject;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Scanner;
 
 public class MusicPlayerServer {
     private static ServerSocket serverSocket;
-    private static final int PORT = 1234;
+    private static final int PORT = 4321;
     public static void main(String[] args) throws IOException {
 
         try {
@@ -22,7 +21,7 @@ public class MusicPlayerServer {
             Socket client = serverSocket.accept();
             System.out.println("\nNew client accepted.\n");
             ClientHandler handler = new ClientHandler(client);
-            handler.start();//As usual, method calls run.
+            handler.start();
         } while (true);
 
 

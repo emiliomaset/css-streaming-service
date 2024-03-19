@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Scanner;
 
 import javafx.application.Application;
 import javafx.event.ActionEvent;
@@ -17,7 +16,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
@@ -27,7 +25,8 @@ import javafx.stage.Stage;
 public class MusicPlayerClient extends Application {
 
     private static InetAddress host;
-    private static final int PORT = 4321;
+    private static final int PORT = 1234;
+    private static Socket socket;
     private static ObjectOutputStream objectOutputStream;
     private static ObjectInputStream objectInputStream;
 
@@ -36,7 +35,7 @@ public class MusicPlayerClient extends Application {
     private static MediaPlayer mediaPlayer;
     private static File mp3FileChosenByUser;
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
+    public static void main(String[] args) {
         try {
             host = InetAddress.getLocalHost();
         }
@@ -46,7 +45,7 @@ public class MusicPlayerClient extends Application {
         }
 
         try {
-            Socket socket = null;
+            socket = null;
             socket = new Socket(host, PORT);
             objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             objectInputStream = new ObjectInputStream(socket.getInputStream());
@@ -70,7 +69,13 @@ public class MusicPlayerClient extends Application {
         Button addSongButton = new Button("Add song");
         addSongButton.setOnAction(e -> addSongMenuCreator());
 
-        VBox vBox = new VBox(playButton, pauseButton, addSongButton);
+        Button searchASong = new Button("Search a song");
+        searchASong.setOnAction(e -> searchASongMenuCreator());
+
+        Button viewAllSongs = new Button("View all songs in library");
+        viewAllSongs.setOnAction(e -> viewAllSongsMenuCreator());
+
+        VBox vBox = new VBox(playButton, pauseButton, addSongButton, viewAllSongs, searchASong);
 
         scene = new Scene(vBox);
         primaryStage.setScene(scene);
@@ -80,7 +85,8 @@ public class MusicPlayerClient extends Application {
 
     }
 
-    public void playSong() {
+
+    public void playSong()  {
         mediaPlayer.play();
     }
 
@@ -130,14 +136,12 @@ public class MusicPlayerClient extends Application {
 //
 //                if(songTitleTextField.getText().isEmpty() || artistNameTextField.getText().isEmpty() || mp3FileTextField.getText().isEmpty())
 //                    return;
-
-                Song songBeingSent = new Song(songTitleTextField.getText(), artistNameTextField.getText(), mp3FileChosenByUser);
-
                 try {
-                    objectOutputStream.writeObject(songBeingSent);
+                    objectOutputStream.flush();
+                    objectOutputStream.writeObject(new Song(songTitleTextField.getText(), artistNameTextField.getText(), mp3FileChosenByUser));
                 }
                 catch (IOException e) {
-                    messageSentLabel.setText("Song could not be added!");
+                    messageSentLabel.setText("song could not be added!");
                     throw new RuntimeException(e);
                 }
 
@@ -162,7 +166,66 @@ public class MusicPlayerClient extends Application {
         addSongStage.show();
     }
 
-    public void sendASongToServer(String songTitle, String artist, File mp3File) {
+    public void viewAllSongsMenuCreator() {
+        Stage viewALlSongsStage = new Stage();
+        viewALlSongsStage.setTitle("all songs in library");
 
+    }
+
+    public void searchASongMenuCreator() {
+        Stage searchASongStage = new Stage();
+        searchASongStage.setTitle("search a song");
+
+        TextField searchBar = new TextField();
+        Button searchButton = new Button("search");
+        searchButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                try {
+                    searchASong(searchBar.getText());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+
+        VBox searchVbox = new VBox(searchBar, searchButton);
+
+        Scene searchASongScene = new Scene(searchVbox);
+        searchASongStage.setScene(searchASongScene);
+
+        searchASongStage.setWidth(400);
+        searchASongStage.setHeight(400);
+        searchASongStage.setResizable(false);
+        searchASongStage.show();
+    }
+
+    public void searchASong(String search) throws IOException {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                PrintWriter output = null;
+                try {
+                    output = new PrintWriter(socket.getOutputStream(), true);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                output.println(search);
+                while (socket.isConnected()){
+                    try {
+                        //Song foundSong = (Song) objectInputStream.readObject();
+                        System.out.println(objectInputStream.readObject());
+                        //mediaPlayer = new MediaPlayer(new Media(foundSong.getMp3File().toURI().toString()));
+                        // playSong();
+                    }
+                    catch (IOException | ClassCastException ioEx){
+                        ioEx.printStackTrace();
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+            }
+        }).start();
     }
 }

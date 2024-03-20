@@ -13,6 +13,10 @@ public class Song implements Serializable {
         this.mp3File = mp3File;
     }
 
+    public Song() {
+
+    }
+
     public String getSongTitle() {
         return this.songTitle;
     }

@@ -2,23 +2,27 @@ package com.example.clientserverfinalproject;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class ClientHandler extends Thread {
     private Socket clientSocket;
-    private ObjectOutputStream objectOutputStream;
-    private ObjectInputStream objectInputStream;
-    private Scanner input;
+    private DataOutputStream dataOutputStream;
+    private DataInputStream dataInputStream;
+    private FileOutputStream fileOutputStream;
+    private FileInputStream fileInputStream;
+    private Scanner stringInput;
 
-    private File dataBaseFile = new File("songDatabase.txt");
 
-    public ClientHandler(Socket socket) throws IOException, ClassNotFoundException {
+    public ClientHandler(Socket socket){
 
         this.clientSocket = socket;
         try {
-            objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
-            objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
-            input = new Scanner(clientSocket.getInputStream());
+            dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            dataInputStream = new DataInputStream(socket.getInputStream());
+            stringInput = new Scanner(clientSocket.getInputStream());
 
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
@@ -27,63 +31,102 @@ public class ClientHandler extends Thread {
 
     @Override
     public void run() {
-        analyzeSearch();
         try {
-            sendASongToDatabase();
-        } catch (IOException e) {
-            e.printStackTrace();
+            receiveASong();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
+    public Song receiveASong() throws Exception{
+        Song song = new Song();
+        int bytes = 0;
+        File file = new File("dummy.mp3");
+        FileOutputStream fileOutputStream = new FileOutputStream(file);
 
-    public void analyzeSearch() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (clientSocket.isConnected()) {
-                    String searchedSong = input.nextLine();
-                    searchedSong = searchedSong.toLowerCase();
-                    searchedSong = searchedSong.replace(" ", "");
-                    System.out.println(searchedSong);
-                    try {
-                        ObjectInputStream databaseInputStream = new ObjectInputStream(new FileInputStream("songDatabase.txt"));
-                        while (true) {
-                            Song o = (Song) databaseInputStream.readObject();
-                            System.out.println(o);
-                            if (o.getSongTitle().equals(searchedSong))
-                                try {
-                                    objectOutputStream.writeObject(o);
-                                    objectOutputStream.flush();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    break;
-                                }
-                        }
-                    } catch (IOException e) {
-                    } catch (ClassNotFoundException e) {
-                    }
-                }
-            }
-        }).start();
+        long size = dataInputStream.readLong(); // read file size
+        byte[] buffer = new byte[4 * 1024];
+        while (size > 0 && (bytes = dataInputStream.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
+            // Here we write the file using write method
+            fileOutputStream.write(buffer, 0, bytes);
+            size -= bytes; // read upto file size
+        }
+
+
+        System.out.println("File is Received");
+        fileOutputStream.close();
+
+        Scanner stringInput = new Scanner(clientSocket.getInputStream());
+        song.setSongTitle(stringInput.nextLine());
+
+        Files.move(Path.of(file.toURI()), Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/song-database/" + song.getSongTitle() + ".mp3"));
+        song.setMp3File(new File(song.getSongTitle()));
+        song.setArtist(stringInput.nextLine());
+
+        return song;
     }
 
-    public void sendASongToDatabase() throws IOException {
-        ObjectOutputStream objectOutputStreamToDatabase = new ObjectOutputStream(new FileOutputStream
-                (new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject", "songDatabase.txt")));
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (clientSocket.isConnected()) {
-                    try {
-                        objectOutputStreamToDatabase.writeObject((Song) objectInputStream.readObject());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    } catch (ClassNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
 
-                }
-            }
-        }).start();
+    //    public void analyzeSearch() {
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (clientSocket.isConnected()) {
+//                    String searchedSong = input.nextLine();
+//                    searchedSong = searchedSong.toLowerCase();
+//                    searchedSong = searchedSong.replace(" ", "");
+//                    System.out.println(searchedSong);
+//                    try {
+//                        ObjectInputStream databaseInputStream = new ObjectInputStream(new FileInputStream("songDatabase.txt"));
+//                        while (true) {
+//                            Song o = (Song) databaseInputStream.readObject();
+//                            System.out.println(o);
+//                            if (o.getSongTitle().equals(searchedSong))
+//                                try {
+//                                    objectOutputStream.writeObject(o);
+//                                    objectOutputStream.flush();
+//                                } catch (IOException e) {
+//                                    e.printStackTrace();
+//                                    break;
+//                                }
+//                        }
+//                    } catch (IOException e) {
+//                    } catch (ClassNotFoundException e) {
+//                    }
+//                }
+//            }
+//        }).start();
+////    }
+//
+    public void sendASongToDatabase() throws IOException {
+
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (clientSocket.isConnected()) {
+//                    try {
+//                        Song song = receiveASong();
+//                        ArrayList<Song> allSongs = new ArrayList<Song>();
+//                        allSongs.add(song);
+//                    } catch (IOException e) {
+//                        throw new RuntimeException(e);
+//                    } catch (ClassNotFoundException e) {
+//                        throw new RuntimeException(e);
+//                    } catch (Exception e) {
+//                        throw new RuntimeException(e);
+//                    }
+//
+//                }
+//            }
+//        }).start();
+
+        Song song = null;
+        try {
+            song = receiveASong();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        ArrayList<Song> allSongs = new ArrayList<Song>();
+                       allSongs.add(song);
     }
 }

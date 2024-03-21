@@ -35,20 +35,12 @@ public class MusicPlayerClient extends Application{
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
 
-    public MusicPlayerClient(Socket socket) {
-        this.socket = socket;
-        try {
-            this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
-            this.dataInputStream = new DataInputStream(this.socket.getInputStream());
-            this.stringOutputStream = new PrintWriter(this.socket.getOutputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
 
     public MusicPlayerClient () {
+    }
 
+    public void setSocket(Socket socket) {
+        this.socket = socket;
     }
 
     public static void main(String[] args) throws Exception {
@@ -58,8 +50,9 @@ public class MusicPlayerClient extends Application{
         try {
             host = InetAddress.getLocalHost();
             sock = new Socket(host, PORT);
-            MusicPlayerClient musicPlayerClient = new MusicPlayerClient(sock);
+
             launch(args);
+            //MusicPlayerClient musicPlayerClient = new MusicPlayerClient(sock);
         }
         catch (UnknownHostException unknownHostException) {
             System.out.println("\nHost not found!");
@@ -73,7 +66,11 @@ public class MusicPlayerClient extends Application{
 
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws IOException {
+
+        dataOutputStream = new DataOutputStream(socket.getOutputStream());
+        dataInputStream = new DataInputStream(socket.getInputStream());
+        stringOutputStream = new PrintWriter(socket.getOutputStream());
 
         Button playButton = new Button("Play");
         playButton.setOnAction(e -> playSong());

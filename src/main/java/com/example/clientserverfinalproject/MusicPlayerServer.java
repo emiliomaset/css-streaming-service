@@ -7,7 +7,8 @@ import java.net.Socket;
 public class MusicPlayerServer {
     private static ServerSocket serverSocket;
     private static final int PORT = 1234;
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
+
+    public static void main(String[] args) throws IOException {
 
 
         try {

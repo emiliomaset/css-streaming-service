@@ -14,7 +14,6 @@ public class Song implements Serializable {
     }
 
     public Song() {
-
     }
 
     public String getSongTitle() {

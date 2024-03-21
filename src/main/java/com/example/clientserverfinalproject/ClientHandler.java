@@ -15,6 +15,7 @@ public class ClientHandler extends Thread {
     private FileInputStream fileInputStream;
     private Scanner stringInput;
 
+    private ArrayList<Song> allSongs = new ArrayList<Song>();
 
     public ClientHandler(Socket socket){
 
@@ -31,39 +32,38 @@ public class ClientHandler extends Thread {
 
     @Override
     public void run() {
-        try {
-            receiveASong();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+            try {
+                sendASongToDatabase();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
     }
 
-    public Song receiveASong() throws Exception{
-        Song song = new Song();
-        int bytes = 0;
-        File file = new File("dummy.mp3");
-        FileOutputStream fileOutputStream = new FileOutputStream(file);
+    public Song receiveASong() throws Exception {
+            Song song = new Song();
+            int bytes = 0;
+            File file = new File("dummy.mp3"); // create dummy file to store song in
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
 
-        long size = dataInputStream.readLong(); // read file size
-        byte[] buffer = new byte[4 * 1024];
-        while (size > 0 && (bytes = dataInputStream.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
-            // Here we write the file using write method
-            fileOutputStream.write(buffer, 0, bytes);
-            size -= bytes; // read upto file size
-        }
+            long size = dataInputStream.readLong(); // get song file size client
+            byte[] buffer = new byte[4 * 1024];
+            while (size > 0 && (bytes = dataInputStream.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
+                fileOutputStream.write(buffer, 0, bytes);
+                size -= bytes;
+            }
 
+            fileOutputStream.close();
 
-        System.out.println("File is Received");
-        fileOutputStream.close();
+            Scanner stringInput = new Scanner(clientSocket.getInputStream());
+            song.setSongTitle(stringInput.nextLine());
 
-        Scanner stringInput = new Scanner(clientSocket.getInputStream());
-        song.setSongTitle(stringInput.nextLine());
+            Files.move(Path.of(file.toURI()),
+                    Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/song-database/" + song.getSongTitle() + ".mp3"));
+            // rename song file to title of song and move to database
+            song.setMp3File(file);
+            song.setArtist(stringInput.nextLine());
+            return song;
 
-        Files.move(Path.of(file.toURI()), Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/song-database/" + song.getSongTitle() + ".mp3"));
-        song.setMp3File(new File(song.getSongTitle()));
-        song.setArtist(stringInput.nextLine());
-
-        return song;
     }
 
 
@@ -100,33 +100,24 @@ public class ClientHandler extends Thread {
 //
     public void sendASongToDatabase() throws IOException {
 
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                while (clientSocket.isConnected()) {
-//                    try {
-//                        Song song = receiveASong();
-//                        ArrayList<Song> allSongs = new ArrayList<Song>();
-//                        allSongs.add(song);
-//                    } catch (IOException e) {
-//                        throw new RuntimeException(e);
-//                    } catch (ClassNotFoundException e) {
-//                        throw new RuntimeException(e);
-//                    } catch (Exception e) {
-//                        throw new RuntimeException(e);
-//                    }
-//
-//                }
-//            }
-//        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (clientSocket.isConnected()) {
+                    try {
+                        Song song = receiveASong();
+                        ArrayList<Song> allSongs = new ArrayList<Song>();
+                        allSongs.add(song);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
 
-        Song song = null;
-        try {
-            song = receiveASong();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        ArrayList<Song> allSongs = new ArrayList<Song>();
-                       allSongs.add(song);
+                }
+            }
+        }).start();
     }
 }

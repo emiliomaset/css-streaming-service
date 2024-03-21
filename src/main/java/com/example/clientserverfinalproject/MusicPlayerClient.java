@@ -10,54 +10,67 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.chart.PieChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.input.MouseEvent;
 
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-public class MusicPlayerClient extends Application {
+public class MusicPlayerClient extends Application{
 
-    private static InetAddress host;
     private static final int PORT = 1234;
-    private static Socket socket;
-    private static DataOutputStream dataOutputStream;
-    private static DataInputStream dataInputStream;
-    private static FileOutputStream fileOutputStream;
-    private static FileInputStream fileInputStream;
+    private Socket socket;
+    private DataOutputStream dataOutputStream;
+    private DataInputStream dataInputStream;
+    private FileOutputStream fileOutputStream;
+    private FileInputStream fileInputStream;
+    private PrintWriter stringOutputStream;
 
-    private static Scene scene;
+    private Scene scene;
 
-    private static MediaPlayer mediaPlayer;
-    private static File mp3FileChosenByUser;
+    private MediaPlayer mediaPlayer;
+    private File mp3FileChosenByUser;
 
-    public static void main(String[] args) {
+    public MusicPlayerClient(Socket socket) {
+        this.socket = socket;
+        try {
+            this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
+            this.dataInputStream = new DataInputStream(this.socket.getInputStream());
+            this.stringOutputStream = new PrintWriter(this.socket.getOutputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public MusicPlayerClient () {
+
+    }
+
+    public static void main(String[] args) throws Exception {
+        InetAddress host = null;
+        Socket sock = null;
+
         try {
             host = InetAddress.getLocalHost();
+            sock = new Socket(host, PORT);
+            MusicPlayerClient musicPlayerClient = new MusicPlayerClient(sock);
+            launch(args);
         }
         catch (UnknownHostException unknownHostException) {
             System.out.println("\nHost not found!");
             System.exit(1);
         }
-
-        try {
-            socket = new Socket(host, PORT);
-            dataOutputStream = new DataOutputStream(socket.getOutputStream());
-            dataInputStream = new DataInputStream(socket.getInputStream());
-        }
-        catch (IOException ioEx) {
+        catch (IOException ioEx)
+        {
             ioEx.printStackTrace();
         }
-
-        launch(args);
     }
+
 
     @Override
     public void start(Stage primaryStage) {
@@ -111,14 +124,11 @@ public class MusicPlayerClient extends Application {
         TextField songTitleTextField = new TextField();
         TextField artistNameTextField = new TextField();
         TextField mp3FileTextField = new TextField();
-        mp3FileTextField.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent mouseEvent) {
-                FileChooser mp3FileChooser = new FileChooser();
-                mp3FileChosenByUser = mp3FileChooser.showOpenDialog(addSongStage);
-                mp3FileTextField.setText(mp3FileChosenByUser.getName());
-                mp3FileTextField.setEditable(false);
-            }
+        mp3FileTextField.setOnMouseClicked(mouseEvent -> {
+            FileChooser mp3FileChooser = new FileChooser();
+            mp3FileChosenByUser = mp3FileChooser.showOpenDialog(addSongStage);
+            mp3FileTextField.setText(mp3FileChosenByUser.getName());
+            mp3FileTextField.setEditable(false);
         });
 
         Button addSongButton = new Button("add");
@@ -126,34 +136,21 @@ public class MusicPlayerClient extends Application {
         addSongButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-//                if (songTitleTextField.getText().isEmpty()) {
-//                    songTitleTextField.setBorder(Border.stroke(Color.RED));
-//                }
-//                if (artistNameTextField.getText().isEmpty()) {
-//                    artistNameTextField.setBorder(Border.stroke(Color.RED));
-//                }
-//                if (mp3FileTextField.getText().isEmpty()) {
-//                    mp3FileTextField.setBorder(Border.stroke(Color.RED));
-//                }
-//
-//                if(songTitleTextField.getText().isEmpty() || artistNameTextField.getText().isEmpty() || mp3FileTextField.getText().isEmpty())
-//                    return;
                 try {
                     sendSong(new Song(songTitleTextField.getText(), artistNameTextField.getText(), mp3FileChosenByUser));
                     messageSentLabel.setText("song successfully added to library!");
+                    songTitleTextField.setText("");
+                    artistNameTextField.setText("");
+                    mp3FileTextField.setText("");
                 }
                 catch (IOException e) {
                     messageSentLabel.setText("song could not be added!");
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
-
-
-
             }
         });
-
 
         VBox addSongTextFieldsAndFileChooser = new VBox(songTitleTextField, artistNameTextField, mp3FileTextField, messageSentLabel);
         addSongTextFieldsAndFileChooser.setAlignment(Pos.CENTER_RIGHT);
@@ -233,28 +230,23 @@ public class MusicPlayerClient extends Application {
 //        }).start();
 //    }
 
-    private static void sendSong(Song song) throws Exception
-    {
+    public void sendSong(Song song) throws Exception {
         int bytes = 0;
-        File file = new File(song.getMp3File().toString());
-        System.out.println(song.getMp3File().toString());
-        FileInputStream fileInputStream = new FileInputStream(file);
+        File file = song.getMp3File();
+        fileInputStream = new FileInputStream(file);
 
-        dataOutputStream.writeLong(file.length());
+        dataOutputStream.writeLong(file.length()); // null????
+        dataOutputStream.flush();
         byte[] buffer = new byte[4 * 1024];
         while ((bytes = fileInputStream.read(buffer)) != -1) {
-            dataOutputStream.write(buffer, 0, bytes);;
+            dataOutputStream.write(buffer, 0, bytes);
             dataOutputStream.flush();
         }
         fileInputStream.close();
 
-        PrintWriter stringOutputStream = new PrintWriter(socket.getOutputStream());
         stringOutputStream.println(song.getSongTitle());
         stringOutputStream.println(song.getArtist());
         stringOutputStream.close();
-
-
-
     }
 }
 

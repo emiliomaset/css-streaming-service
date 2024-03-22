@@ -10,7 +10,6 @@ public class MusicPlayerServer {
 
     public static void main(String[] args) throws IOException {
 
-
         try {
             serverSocket = new ServerSocket(PORT);
         } catch (IOException ioEx) {

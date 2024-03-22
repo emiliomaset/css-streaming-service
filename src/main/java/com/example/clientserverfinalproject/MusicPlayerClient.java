@@ -35,24 +35,27 @@ public class MusicPlayerClient extends Application{
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
 
+//    public MusicPlayerClient(Socket socket) {
+//        this.socket = socket;
+//        try {
+//            this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
+//            this.dataInputStream = new DataInputStream(this.socket.getInputStream());
+//            this.stringOutputStream = new PrintWriter(this.socket.getOutputStream());
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
 
     public MusicPlayerClient () {
-    }
-
-    public void setSocket(Socket socket) {
-        this.socket = socket;
-    }
-
-    public static void main(String[] args) throws Exception {
-        InetAddress host = null;
-        Socket sock = null;
+        InetAddress host;
 
         try {
             host = InetAddress.getLocalHost();
-            sock = new Socket(host, PORT);
-
-            launch(args);
-            //MusicPlayerClient musicPlayerClient = new MusicPlayerClient(sock);
+            socket = new Socket(host, PORT);
+            dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            dataInputStream = new DataInputStream(socket.getInputStream());
+            stringOutputStream = new PrintWriter(socket.getOutputStream());
         }
         catch (UnknownHostException unknownHostException) {
             System.out.println("\nHost not found!");
@@ -62,15 +65,16 @@ public class MusicPlayerClient extends Application{
         {
             ioEx.printStackTrace();
         }
+
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 
 
     @Override
-    public void start(Stage primaryStage) throws IOException {
-
-        dataOutputStream = new DataOutputStream(socket.getOutputStream());
-        dataInputStream = new DataInputStream(socket.getInputStream());
-        stringOutputStream = new PrintWriter(socket.getOutputStream());
+    public void start(Stage primaryStage) {
 
         Button playButton = new Button("Play");
         playButton.setOnAction(e -> playSong());
@@ -232,6 +236,8 @@ public class MusicPlayerClient extends Application{
         File file = song.getMp3File();
         fileInputStream = new FileInputStream(file);
 
+
+        System.out.println(socket.isClosed());
         dataOutputStream.writeLong(file.length()); // null????
         dataOutputStream.flush();
         byte[] buffer = new byte[4 * 1024];
@@ -239,11 +245,11 @@ public class MusicPlayerClient extends Application{
             dataOutputStream.write(buffer, 0, bytes);
             dataOutputStream.flush();
         }
-        fileInputStream.close();
+        //fileInputStream.flush(); // culprit
 
         stringOutputStream.println(song.getSongTitle());
         stringOutputStream.println(song.getArtist());
-        stringOutputStream.close();
+        stringOutputStream.flush();
     }
 }
 

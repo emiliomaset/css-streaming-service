@@ -24,7 +24,6 @@ public class ClientHandler extends Thread {
             dataOutputStream = new DataOutputStream(socket.getOutputStream());
             dataInputStream = new DataInputStream(socket.getInputStream());
             stringInput = new Scanner(clientSocket.getInputStream());
-
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
@@ -45,20 +44,20 @@ public class ClientHandler extends Thread {
             File file = new File("dummy.mp3"); // create dummy file to store song in
             FileOutputStream fileOutputStream = new FileOutputStream(file);
 
-            long size = dataInputStream.readLong(); // get song file size client
+            long size = dataInputStream.readLong(); // get song file size from client
             byte[] buffer = new byte[4 * 1024];
             while (size > 0 && (bytes = dataInputStream.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
                 fileOutputStream.write(buffer, 0, bytes);
                 size -= bytes;
             }
 
-            fileOutputStream.close();
+            fileOutputStream.flush();
 
             Scanner stringInput = new Scanner(clientSocket.getInputStream());
             song.setSongTitle(stringInput.nextLine());
 
             Files.move(Path.of(file.toURI()),
-                    Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/song-database/" + song.getSongTitle() + ".mp3"));
+                    Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/song-database/" + song.getSongTitle().replaceAll(" ", "") + ".mp3"));
             // rename song file to title of song and move to database
             song.setMp3File(file);
             song.setArtist(stringInput.nextLine());
@@ -103,19 +102,12 @@ public class ClientHandler extends Thread {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (clientSocket.isConnected()) {
+                while (clientSocket.isConnected() && !clientSocket.isClosed()) {
                     try {
                         Song song = receiveASong();
-                        ArrayList<Song> allSongs = new ArrayList<Song>();
-                        allSongs.add(song);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    } catch (ClassNotFoundException e) {
-                        throw new RuntimeException(e);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
-
                 }
             }
         }).start();

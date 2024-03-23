@@ -9,11 +9,15 @@ import java.util.Scanner;
 
 public class ClientHandler extends Thread {
     private Socket clientSocket;
-    private DataOutputStream dataOutputStream;
-    private DataInputStream dataInputStream;
-    private FileOutputStream fileOutputStream;
-    private FileInputStream fileInputStream;
+    private DataOutputStream dataOutputStreamToSendFiles;
+    private DataInputStream dataInputStreamToReceiveFiles;
+    private ObjectOutputStream objectOutputStreamToClient;
+    private ObjectOutputStream objectOutputStreamToWriteToSongLibrary;
     private Scanner stringInput;
+
+    //create file of Song objects whose files are currently in the song-database when receiving a song,
+    // then access this file and loop through it when a song is searched.
+    // when found, send this Song object to sendSong() method.
 
     private ArrayList<Song> allSongs = new ArrayList<Song>();
 
@@ -21,8 +25,10 @@ public class ClientHandler extends Thread {
 
         this.clientSocket = socket;
         try {
-            dataOutputStream = new DataOutputStream(socket.getOutputStream());
-            dataInputStream = new DataInputStream(socket.getInputStream());
+            dataOutputStreamToSendFiles = new DataOutputStream(socket.getOutputStream());
+            dataInputStreamToReceiveFiles = new DataInputStream(socket.getInputStream());
+            objectOutputStreamToClient = new ObjectOutputStream(socket.getOutputStream());
+            objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.dat"));
             stringInput = new Scanner(clientSocket.getInputStream());
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
@@ -42,25 +48,26 @@ public class ClientHandler extends Thread {
             Song song = new Song();
             int bytes = 0;
             File file = new File("dummy.mp3"); // create dummy file to store song in
-            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            FileOutputStream fileOutputStreamToMakeMp3iles = new FileOutputStream(file);
 
-            long size = dataInputStream.readLong(); // get song file size from client
+            long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
             byte[] buffer = new byte[4 * 1024];
-            while (size > 0 && (bytes = dataInputStream.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
-                fileOutputStream.write(buffer, 0, bytes);
+            while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
+                fileOutputStreamToMakeMp3iles.write(buffer, 0, bytes);
                 size -= bytes;
             }
 
-            fileOutputStream.flush();
+        fileOutputStreamToMakeMp3iles.flush();
 
             Scanner stringInput = new Scanner(clientSocket.getInputStream());
             song.setSongTitle(stringInput.nextLine());
 
-            Files.move(Path.of(file.toURI()),
-                    Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/song-database/" + song.getSongTitle().replaceAll(" ", "") + ".mp3"));
-            // rename song file to title of song and move to database
-            song.setMp3File(file);
+            Files.move(Path.of(file.getPath()),
+                    Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/" + song.getSongTitle().replaceAll(" ", "") + ".mp3"));
+            // rename song file to title of song and move to mp3-database
+            song.setMp3File(new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/" + song.getSongTitle().replaceAll(" ", "") + ".mp3"));
             song.setArtist(stringInput.nextLine());
+
             return song;
 
     }
@@ -105,6 +112,7 @@ public class ClientHandler extends Thread {
                 while (clientSocket.isConnected() && !clientSocket.isClosed()) {
                     try {
                         Song song = receiveASong();
+                        objectOutputStreamToWriteToSongLibrary.writeObject(song);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }

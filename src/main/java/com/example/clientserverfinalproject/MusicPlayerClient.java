@@ -16,11 +16,12 @@ import javafx.scene.control.TextField;
 
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-public class MusicPlayerClient extends Application{
+public class MusicPlayerClient extends Application {
 
     private static final int PORT = 1234;
     private Socket socket;
@@ -47,7 +48,7 @@ public class MusicPlayerClient extends Application{
 //
 //    }
 
-    public MusicPlayerClient () {
+    public MusicPlayerClient() {
         InetAddress host;
 
         try {
@@ -56,13 +57,10 @@ public class MusicPlayerClient extends Application{
             dataOutputStream = new DataOutputStream(socket.getOutputStream());
             dataInputStream = new DataInputStream(socket.getInputStream());
             stringOutputStream = new PrintWriter(socket.getOutputStream());
-        }
-        catch (UnknownHostException unknownHostException) {
+        } catch (UnknownHostException unknownHostException) {
             System.out.println("\nHost not found!");
             System.exit(1);
-        }
-        catch (IOException ioEx)
-        {
+        } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
 
@@ -102,7 +100,7 @@ public class MusicPlayerClient extends Application{
     }
 
 
-    public void playSong()  {
+    public void playSong() {
         mediaPlayer.play();
     }
 
@@ -143,8 +141,7 @@ public class MusicPlayerClient extends Application{
                     songTitleTextField.setText("");
                     artistNameTextField.setText("");
                     mp3FileTextField.setText("");
-                }
-                catch (IOException e) {
+                } catch (IOException e) {
                     messageSentLabel.setText("song could not be added!");
                     e.printStackTrace();
                 } catch (Exception e) {
@@ -180,16 +177,16 @@ public class MusicPlayerClient extends Application{
 
         TextField searchBar = new TextField();
         Button searchButton = new Button("search");
-//        searchButton.setOnAction(new EventHandler<ActionEvent>() {
-//            @Override
-//            public void handle(ActionEvent actionEvent) {
-//                try {
-//                    searchASong(searchBar.getText());
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//        });
+        searchButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                try {
+                    searchASong(searchBar.getText());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
 
         VBox searchVbox = new VBox(searchBar, searchButton);
 
@@ -202,34 +199,23 @@ public class MusicPlayerClient extends Application{
         searchASongStage.show();
     }
 
-//    public void searchASong(String search) throws IOException {
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                PrintWriter output = null;
-//                try {
-//                    output = new PrintWriter(socket.getOutputStream(), true);
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                }
-//                output.println(search);
-//                while (socket.isConnected()){
-//                    try {
-//                        //Song foundSong = (Song) objectInputStream.readObject();
-//                        System.out.println(objectInputStream.readObject());
-//                        //mediaPlayer = new MediaPlayer(new Media(foundSong.getMp3File().toURI().toString()));
-//                        // playSong();
-//                    }
-//                    catch (IOException | ClassCastException ioEx){
-//                        ioEx.printStackTrace();
-//                    } catch (ClassNotFoundException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }
-//
-//            }
-//        }).start();
-//    }
+    public void searchASong(String search) throws IOException {
+        PrintWriter output = null;
+        try {
+            output = new PrintWriter(socket.getOutputStream(), true);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        output.println(search);
+
+        //File foundSong = (Song) objectInputStream.readObject();
+        //System.out.println(objectInputStream.readObject());
+        //mediaPlayer = new MediaPlayer(new Media(foundSong.getMp3File().toURI().toString()));
+        // playSong();
+
+    }
+
+
 
     public void sendSong(Song song) throws Exception {
         int bytes = 0;
@@ -245,7 +231,7 @@ public class MusicPlayerClient extends Application{
             dataOutputStream.write(buffer, 0, bytes);
             dataOutputStream.flush();
         }
-        //fileInputStream.flush(); // culprit
+        //fileInputStream.close(); // culprit
 
         stringOutputStream.println(song.getSongTitle());
         stringOutputStream.println(song.getArtist());

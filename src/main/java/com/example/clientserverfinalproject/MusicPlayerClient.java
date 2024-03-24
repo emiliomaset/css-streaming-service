@@ -4,6 +4,9 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Scanner;
 
 import javafx.application.Application;
 import javafx.event.ActionEvent;
@@ -26,27 +29,15 @@ public class MusicPlayerClient extends Application {
     private static final int PORT = 1234;
     private Socket socket;
     private DataOutputStream dataOutputStream;
-    private DataInputStream dataInputStream;
-    private FileOutputStream fileOutputStream;
+    private DataInputStream dataInputStreamToReceiveFiles;
     private FileInputStream fileInputStream;
     private PrintWriter stringOutputStream;
+    private File fileReceivedFromServer;
 
     private Scene scene;
 
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
-
-//    public MusicPlayerClient(Socket socket) {
-//        this.socket = socket;
-//        try {
-//            this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream());
-//            this.dataInputStream = new DataInputStream(this.socket.getInputStream());
-//            this.stringOutputStream = new PrintWriter(this.socket.getOutputStream());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//    }
 
     public MusicPlayerClient() {
         InetAddress host;
@@ -55,7 +46,7 @@ public class MusicPlayerClient extends Application {
             host = InetAddress.getLocalHost();
             socket = new Socket(host, PORT);
             dataOutputStream = new DataOutputStream(socket.getOutputStream());
-            dataInputStream = new DataInputStream(socket.getInputStream());
+            dataInputStreamToReceiveFiles = new DataInputStream(socket.getInputStream());
             stringOutputStream = new PrintWriter(socket.getOutputStream());
         } catch (UnknownHostException unknownHostException) {
             System.out.println("\nHost not found!");
@@ -182,7 +173,8 @@ public class MusicPlayerClient extends Application {
             public void handle(ActionEvent actionEvent) {
                 try {
                     searchASong(searchBar.getText());
-                } catch (IOException e) {
+                    System.out.println(searchBar.getText());
+                } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -199,20 +191,10 @@ public class MusicPlayerClient extends Application {
         searchASongStage.show();
     }
 
-    public void searchASong(String search) throws IOException {
-        PrintWriter output = null;
-        try {
-            output = new PrintWriter(socket.getOutputStream(), true);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        output.println(search);
+    public void searchASong(String search) throws Exception {
+        stringOutputStream.println(search);
 
-        //File foundSong = (Song) objectInputStream.readObject();
-        //System.out.println(objectInputStream.readObject());
-        //mediaPlayer = new MediaPlayer(new Media(foundSong.getMp3File().toURI().toString()));
-        // playSong();
-
+        receiveASong();
     }
 
 
@@ -223,7 +205,6 @@ public class MusicPlayerClient extends Application {
         fileInputStream = new FileInputStream(file);
 
 
-        System.out.println(socket.isClosed());
         dataOutputStream.writeLong(file.length()); // null????
         dataOutputStream.flush();
         byte[] buffer = new byte[4 * 1024];
@@ -233,10 +214,41 @@ public class MusicPlayerClient extends Application {
         }
         //fileInputStream.close(); // culprit
 
-        stringOutputStream.println(song.getSongTitle());
+        stringOutputStream.flush();
+        stringOutputStream.println(song.getSongTitle()); //culprit to weird print outs
         stringOutputStream.println(song.getArtist());
         stringOutputStream.flush();
     }
+
+    public void receiveASong() throws Exception {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int bytes = 0;
+                fileReceivedFromServer = new File("dummy2.mp3"); // create dummy file to store song in
+                try {
+                    FileOutputStream fileOutputStreamToMakeMp3iles = new FileOutputStream(fileReceivedFromServer);
+
+                    long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
+                    System.out.println(size);
+                    byte[] buffer = new byte[4 * 1024];
+                    while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
+                        fileOutputStreamToMakeMp3iles.write(buffer, 0, bytes);
+                        size -= bytes;
+                    }
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+
+                //mediaPlayer = new MediaPlayer(new Media("dummy2.mp3"));
+                //playSong();
+
+            }
+        }).start();
+    }
 }
+
+
+
 
 

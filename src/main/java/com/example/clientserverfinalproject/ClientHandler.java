@@ -18,7 +18,6 @@ public class ClientHandler extends Thread {
     // then access this file and loop through it when a song is searched.
     // when found, send this Song object to sendSong() method.
 
-    // sent file not moving to mp3 directory -- 8:49 am 3/23/24
 
     private ArrayList<Song> allSongs = new ArrayList<Song>();
 
@@ -41,7 +40,7 @@ public class ClientHandler extends Thread {
     public void run() {
         try {
             sendASongToSongLibraryFile();
-             analyzeSearch(); // doesnt like this.
+            analyzeSearch(); // doesnt like this.
             //mp3 files arent added to mp3-database, only kept in dummy.mp3, and objects arent written to songlibrary.dat
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -62,8 +61,7 @@ public class ClientHandler extends Thread {
                         throw new RuntimeException(e);
                     }
                     String searchedSong = input.nextLine(); //culprit to weird print outs. must be getting activated in receiveASong() when getting songtitle
-                    System.out.println("hiiiiiii");
-                    searchedSong = searchedSong.toLowerCase().replaceAll(" ", "");
+                    System.out.println("analyzeSearch() activated");
                     System.out.println(searchedSong);
                     try {
                         ObjectInputStream databaseObjectInputStream = new ObjectInputStream(new FileInputStream("songlibrary.dat"));
@@ -106,7 +104,7 @@ public class ClientHandler extends Thread {
 
     }
 
-   // ===========================================================================================================================
+    // ===========================================================================================================================
 
     public void sendASongToSongLibraryFile() throws IOException {
 

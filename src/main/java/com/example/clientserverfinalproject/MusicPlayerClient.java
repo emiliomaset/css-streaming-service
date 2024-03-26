@@ -173,7 +173,6 @@ public class MusicPlayerClient extends Application {
             public void handle(ActionEvent actionEvent) {
                 try {
                     searchASong(searchBar.getText());
-                    System.out.println(searchBar.getText());
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -205,7 +204,7 @@ public class MusicPlayerClient extends Application {
         fileInputStream = new FileInputStream(file);
 
 
-        dataOutputStream.writeLong(file.length()); // null????
+        dataOutputStream.writeLong(file.length()); // activating searchedSong = input.nextLine() in analyzeSearch() method in server?
         dataOutputStream.flush();
         byte[] buffer = new byte[4 * 1024];
         while ((bytes = fileInputStream.read(buffer)) != -1) {
@@ -215,7 +214,7 @@ public class MusicPlayerClient extends Application {
         //fileInputStream.close(); // culprit
 
         stringOutputStream.flush();
-        stringOutputStream.println(song.getSongTitle()); //culprit to weird print outs
+        stringOutputStream.println(song.getSongTitle());
         stringOutputStream.println(song.getArtist());
         stringOutputStream.flush();
     }
@@ -230,7 +229,6 @@ public class MusicPlayerClient extends Application {
                     FileOutputStream fileOutputStreamToMakeMp3iles = new FileOutputStream(fileReceivedFromServer);
 
                     long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
-                    System.out.println(size);
                     byte[] buffer = new byte[4 * 1024];
                     while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
                         fileOutputStreamToMakeMp3iles.write(buffer, 0, bytes);

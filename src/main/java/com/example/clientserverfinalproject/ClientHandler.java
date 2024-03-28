@@ -8,11 +8,15 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 public class ClientHandler extends Thread {
-    private Socket clientSocket;
+    private Socket clientSocket1;
+    private Socket clientSocket2;
+    private Socket clientSocket3;
     private DataOutputStream dataOutputStreamToSendFiles;
     private DataInputStream dataInputStreamToReceiveFiles;
     private ObjectOutputStream objectOutputStreamToClient;
+    private ObjectInputStream objectInputStreamFromClient;
     private ObjectOutputStream objectOutputStreamToWriteToSongLibrary;
+    private Scanner stringInputFromClient;
 
     //create file of Song objects whose files are currently in the song-database when receiving a song,
     // then access this file and loop through it when a song is searched.
@@ -21,13 +25,16 @@ public class ClientHandler extends Thread {
 
     private ArrayList<Song> allSongs = new ArrayList<Song>();
 
-    public ClientHandler(Socket socket) {
-
-        this.clientSocket = socket;
+    public ClientHandler(Socket socket1, Socket socket2, Socket socket3) {
+        this.clientSocket1 = socket1;
+        this.clientSocket2 = socket2;
+        this.clientSocket3 = socket3;
         try {
-            dataOutputStreamToSendFiles = new DataOutputStream(socket.getOutputStream());
-            dataInputStreamToReceiveFiles = new DataInputStream(socket.getInputStream());
-            objectOutputStreamToClient = new ObjectOutputStream(socket.getOutputStream());
+            dataOutputStreamToSendFiles = new DataOutputStream(clientSocket1.getOutputStream());
+            dataInputStreamToReceiveFiles = new DataInputStream(clientSocket1.getInputStream());
+            objectOutputStreamToClient = new ObjectOutputStream(clientSocket2.getOutputStream());
+            objectInputStreamFromClient = new ObjectInputStream(clientSocket2.getInputStream());
+            stringInputFromClient = new Scanner(clientSocket3.getInputStream());
             objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.dat", true));
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
@@ -53,21 +60,20 @@ public class ClientHandler extends Thread {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (clientSocket.isConnected()) {
-                    Scanner input;
+                while (clientSocket2.isConnected()) {
+                    ObjectInputStream databaseObjectInputStream = null;
                     try {
-                        input = new Scanner(clientSocket.getInputStream());
+                        databaseObjectInputStream = new ObjectInputStream(new FileInputStream("songlibrary.dat"));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    String searchedSong = input.nextLine(); //culprit to weird print outs. must be getting activated in receiveASong() when getting songtitle
-                    System.out.println("analyzeSearch() activated");
+
+                    String searchedSong = stringInputFromClient.nextLine(); //culprit to weird print outs. must be getting activated in receiveASong() when getting songtitle
                     System.out.println(searchedSong);
                     try {
-                        ObjectInputStream databaseObjectInputStream = new ObjectInputStream(new FileInputStream("songlibrary.dat"));
                         while (true) {
                             Song o = (Song) databaseObjectInputStream.readObject();
-                            System.out.println(o);
+                            System.out.println(o.getSongTitle());
                             if (o.getSongTitle().equals(searchedSong))
                                 try {
                                     sendSongToClient(o);
@@ -89,12 +95,12 @@ public class ClientHandler extends Thread {
     // ===========================================================================================================================
 
     public void sendSongToClient(Song song) throws Exception {
+        System.out.println("sendSongToClient() activated");
         int bytes = 0;
         File file = song.getMp3File();
         FileInputStream fileInputStream = new FileInputStream(file);
 
-        dataOutputStreamToSendFiles = new DataOutputStream(clientSocket.getOutputStream());
-        dataOutputStreamToSendFiles.writeLong(file.length()); // null????
+        dataOutputStreamToSendFiles.writeLong(file.length());
         dataOutputStreamToSendFiles.flush();
         byte[] buffer = new byte[4 * 1024];
         while ((bytes = fileInputStream.read(buffer)) != -1) {
@@ -106,15 +112,16 @@ public class ClientHandler extends Thread {
 
     // ===========================================================================================================================
 
-    public void sendASongToSongLibraryFile() throws IOException {
+    public void sendASongToSongLibraryFile(){
 
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (clientSocket.isConnected() && !clientSocket.isClosed()) {
+                while (clientSocket1.isConnected() && !clientSocket1.isClosed()) {
                     try {
                         Song song = receiveASong();
                         objectOutputStreamToWriteToSongLibrary.writeObject(song);
+                        //objectOutputStreamToWriteToSongLibrary.reset();
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -126,7 +133,6 @@ public class ClientHandler extends Thread {
     // ===========================================================================================================================
 
     public Song receiveASong() throws Exception {
-        Song song = new Song();
         int bytes = 0;
         File file = new File("dummy.mp3"); // create dummy file to store song in // just make this file in mp3 database
         FileOutputStream fileOutputStreamToMakeMp3iles = new FileOutputStream(file);
@@ -140,21 +146,16 @@ public class ClientHandler extends Thread {
 
         fileOutputStreamToMakeMp3iles.flush();
 
-        Scanner stringInput = new Scanner(clientSocket.getInputStream());
-        song.setSongTitle(stringInput.nextLine()); //culprit to weird print outs. getting activated
+        Song song = (Song) objectInputStreamFromClient.readObject();
 
         Files.move(Path.of(file.getPath()),
                 Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/"
                         + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
         // rename song file to title of song and move to mp3-database
         song.setMp3File(new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/" + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
-        song.setArtist(stringInput.nextLine());
-
 
         return song;
     }
 
     // ===========================================================================================================================
-
-
 }

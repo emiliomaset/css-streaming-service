@@ -47,13 +47,11 @@ public class ClientHandler extends Thread {
             Files.delete(Paths.get("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/songlibrary.dat/"));
             objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.dat", true));
             for (Song song : allSongs) {
-                System.out.println(song);
                 objectOutputStreamToWriteToSongLibrary.writeObject(song);
             }
 
             objectOutputStreamToClient.writeObject(allSongs);
 
-            System.out.println(allSongs);
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
@@ -78,6 +76,7 @@ public class ClientHandler extends Thread {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                System.out.println(clientSocket2.isConnected());
                 while (clientSocket2.isConnected()) {
                     ObjectInputStream databaseObjectInputStream = null;
                     try {
@@ -88,7 +87,7 @@ public class ClientHandler extends Thread {
 
                     String searchedSong = stringInputFromClient.nextLine();
                     System.out.println();
-                    System.out.println(searchedSong);
+                    System.out.println("seraching for: " + searchedSong);
                     try {
                         while (true) {
                             Song o = (Song) databaseObjectInputStream.readObject();
@@ -96,7 +95,7 @@ public class ClientHandler extends Thread {
                             if (o.getSongTitle().equals(searchedSong))
                                 try {
                                     sendSongToClient(o);
-                                    return;
+                                    break;
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     break;
@@ -104,14 +103,14 @@ public class ClientHandler extends Thread {
                                     throw new RuntimeException(e);
                                 }
                         }
-                    } catch (IOException e)
-                    {
+                    } catch (IOException e) {
+                        try {
+                            dataOutputStreamToSendFiles.writeLong(-1); //if song is not found in database, send -1
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
                     }
                     catch (ClassNotFoundException e) {
-                    }
-                    try {
-                        dataOutputStreamToSendFiles.writeLong(-1); //if song is not found in database, send -1
-                    } catch (IOException e) {
                     }
                 }
             }
@@ -146,6 +145,7 @@ public class ClientHandler extends Thread {
                 while (clientSocket1.isConnected() && !clientSocket1.isClosed()) {
                     try {
                         Song song = receiveASong();
+                        allSongs.add(song);
                         objectOutputStreamToWriteToSongLibrary.writeObject(song);
                         objectOutputStreamToWriteToSongLibrary.flush();
                         //objectOutputStreamToWriteToSongLibrary.reset();

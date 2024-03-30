@@ -10,5 +10,7 @@ public class SongObjectWriter {
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream
                 (new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject", "songlibrary.dat")));
         objectOutputStream.writeObject(song);
+
+
     }
 }

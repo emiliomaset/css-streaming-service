@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.text.FieldPosition;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -16,9 +17,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -43,10 +42,13 @@ public class MusicPlayerClient extends Application {
     private PrintWriter stringOutputStream;
 
     private Scene scene;
+    private Label titleOfSongCurrentlyPlaying;
+    private Label artistOfSongCurrentlyPlaying;
 
     private Label searchSongMessageLabel;
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
+    private long size;
 
     private ArrayList<Song> allSongs = new ArrayList<Song>();
 
@@ -77,12 +79,7 @@ public class MusicPlayerClient extends Application {
     }
 
     public static void main(String[] args) {
-
-
-
         launch(args);
-
-
     }
 
 
@@ -104,23 +101,36 @@ public class MusicPlayerClient extends Application {
         Button viewAllSongs = new Button("View all songs in library");
         viewAllSongs.setOnAction(e -> viewAllSongsMenuCreator());
 
-        VBox vBox = new VBox(playButton, pauseButton, addSongButton, viewAllSongs, searchASong);
+        Slider volumeSlider = new Slider();
 
-        scene = new Scene(vBox);
+        HBox hBox = new HBox(playButton, pauseButton, addSongButton, viewAllSongs, searchASong, volumeSlider);
+        hBox.setAlignment(Pos.BOTTOM_CENTER);
+
+        titleOfSongCurrentlyPlaying = new Label();
+        artistOfSongCurrentlyPlaying = new Label();
+
+        scene = new Scene(hBox);
         primaryStage.setScene(scene);
-        primaryStage.setHeight(500);
-        primaryStage.setWidth(500);
+        primaryStage.setHeight(300);
+        primaryStage.setWidth(700);
+        primaryStage.setResizable(false);
         primaryStage.show();
 
     }
 
     public void setMediaPlayer(String mp3FileName) {
+        if (!(mediaPlayer == null)) // making sure songs dont overlap
+            mediaPlayer.pause();
         Media hit = new Media(new File(mp3FileName).toURI().toString());
         mediaPlayer = new MediaPlayer(hit);
     }
 
     public void playSong() {
-        mediaPlayer.play();
+        if (new File("dummy2.mp3").exists()){
+            setMediaPlayer("dummy2.mp3");
+            mediaPlayer.play();
+        }
+
     }
 
     public void pauseSong() {
@@ -186,6 +196,70 @@ public class MusicPlayerClient extends Application {
         Stage viewALlSongsStage = new Stage();
         viewALlSongsStage.setTitle("all songs in library");
 
+        ScrollPane viewAllSongsScrollPane = new ScrollPane();
+        ArrayList<HBox> songCards = new ArrayList<>();
+        ArrayList<Label> songCardTitleAndArtistLabelList = new ArrayList<>();
+        ArrayList<Button> songCardPlayButtonList = new ArrayList<>();
+        ArrayList<Button> songCardDownloadButtonList = new ArrayList<>();
+
+
+        for (int i = 0; i < allSongs.size(); i++) {
+            songCardTitleAndArtistLabelList.add(new Label(allSongs.get(i).getSongTitle() + " - " + allSongs.get(i).getArtist()));
+            songCardPlayButtonList.add(new Button("play"));
+            songCardDownloadButtonList.add(new Button("download"));
+            int finalI = i;
+            songCardPlayButtonList.get(i).setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent actionEvent) {
+                    try {
+                        searchASong(allSongs.get(finalI).getSongTitle());
+                        Thread.sleep(265);
+                        playSong();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+            songCardDownloadButtonList.get(i).setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent actionEvent) {
+                    try {
+                        searchASong(allSongs.get(finalI).getSongTitle());
+                        File songFileToDownload = new File("dummy2.mp3");
+                        songFileToDownload.renameTo(new File(allSongs.get(finalI).getSongTitle() + "download.mp3"));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            songCards.add(new HBox(songCardTitleAndArtistLabelList.get(i), songCardPlayButtonList.get(i), songCardDownloadButtonList.get(i)));
+        }
+
+        VBox vbox = new VBox();
+
+        for (HBox songCard : songCards) {
+            vbox.getChildren().add(songCard);
+        }
+
+
+        viewAllSongsScrollPane.setContent(vbox);
+
+//        TextArea allSongsTextArea = new TextArea();
+//        for (Song song : allSongs) {
+//            allSongsTextArea.appendText(song.getSongTitle() + " - " + song.getArtist() + "\n");
+//        }
+
+
+
+        Scene viewAllSongsScene = new Scene(viewAllSongsScrollPane);
+
+        viewALlSongsStage.setScene(viewAllSongsScene);
+        viewALlSongsStage.setWidth(400);
+        viewALlSongsStage.setHeight(400);
+        viewALlSongsStage.setResizable(false);
+        viewALlSongsStage.show();
+
+
     }
 
     public void searchASongMenuCreator() {
@@ -224,6 +298,7 @@ public class MusicPlayerClient extends Application {
 
     public void searchASong(String search) throws Exception {
         stringOutputStream.println(search);
+        System.out.println(search);
         stringOutputStream.flush();
         receiveASong();
     }
@@ -246,6 +321,8 @@ public class MusicPlayerClient extends Application {
         objectOutputStreamToServer.writeObject(song);
         objectOutputStreamToServer.flush();
 
+        allSongs.add(song);
+
     }
 
     public void receiveASong() throws Exception {
@@ -257,7 +334,7 @@ public class MusicPlayerClient extends Application {
                 FileOutputStream fileOutputStreamToMakeMp3iles;
                 try {
                     fileOutputStreamToMakeMp3iles = new FileOutputStream(fileReceivedFromServer);
-                    long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
+                    size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
                     System.out.println(size);
                     if (size == -1) {
                         Platform.runLater(new Runnable() { // runs this code on main thread where JavaFx stuff is
@@ -280,8 +357,7 @@ public class MusicPlayerClient extends Application {
                     throw new RuntimeException(ex);
                 }
 
-//                setMediaPlayer("dummy2.mp3");
-//                playSong();
+
 
             }
         }).start();

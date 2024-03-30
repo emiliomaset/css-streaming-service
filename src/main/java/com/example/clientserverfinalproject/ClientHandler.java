@@ -8,9 +8,9 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 public class ClientHandler extends Thread {
-    private Socket clientSocket1;
-    private Socket clientSocket2;
-    private Socket clientSocket3;
+    private final Socket clientSocket1;
+    private final Socket clientSocket2;
+    private final Socket clientSocket3;
     private DataOutputStream dataOutputStreamToSendFiles;
     private DataInputStream dataInputStreamToReceiveFiles;
     private ObjectOutputStream objectOutputStreamToClient;
@@ -68,7 +68,8 @@ public class ClientHandler extends Thread {
                         throw new RuntimeException(e);
                     }
 
-                    String searchedSong = stringInputFromClient.nextLine(); //culprit to weird print outs. must be getting activated in receiveASong() when getting songtitle
+                    String searchedSong = stringInputFromClient.nextLine();
+                    System.out.println();
                     System.out.println(searchedSong);
                     try {
                         while (true) {
@@ -77,6 +78,7 @@ public class ClientHandler extends Thread {
                             if (o.getSongTitle().equals(searchedSong))
                                 try {
                                     sendSongToClient(o);
+                                    return;
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     break;
@@ -84,8 +86,15 @@ public class ClientHandler extends Thread {
                                     throw new RuntimeException(e);
                                 }
                         }
+                    } catch (IOException e)
+                    {
+                    }
+                    catch (ClassNotFoundException e) {
+                    }
+                    try {
+                        dataOutputStreamToSendFiles.writeLong(-1); //if song is not found in database, send -1
                     } catch (IOException e) {
-                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
@@ -121,6 +130,7 @@ public class ClientHandler extends Thread {
                     try {
                         Song song = receiveASong();
                         objectOutputStreamToWriteToSongLibrary.writeObject(song);
+                        objectOutputStreamToWriteToSongLibrary.flush();
                         //objectOutputStreamToWriteToSongLibrary.reset();
                     } catch (Exception e) {
                         throw new RuntimeException(e);

@@ -10,6 +10,7 @@ import java.text.FieldPosition;
 import java.util.Scanner;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -40,7 +41,7 @@ public class MusicPlayerClient extends Application {
     private PrintWriter stringOutputStream;
 
     private Scene scene;
-
+    private Label searchSongMessageLabel;
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
 
@@ -177,7 +178,7 @@ public class MusicPlayerClient extends Application {
         searchASongStage.setTitle("search a song");
 
         TextField searchBar = new TextField();
-        Label messageLabel = new Label();
+        searchSongMessageLabel = new Label();
         Button searchButton = new Button("search");
         searchButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -185,7 +186,7 @@ public class MusicPlayerClient extends Application {
                 try {
                     searchASong(searchBar.getText());
                 } catch (Exception e) {
-                    messageLabel.setText("song could not be searched!");
+                    searchSongMessageLabel.setText("song could not be searched!");
                     throw new RuntimeException(e);
                 }
             }
@@ -193,7 +194,7 @@ public class MusicPlayerClient extends Application {
 
 
 
-        VBox searchVbox = new VBox(searchBar, searchButton, messageLabel);
+        VBox searchVbox = new VBox(searchBar, searchButton, searchSongMessageLabel);
 
         Scene searchASongScene = new Scene(searchVbox);
         searchASongStage.setScene(searchASongScene);
@@ -241,6 +242,17 @@ public class MusicPlayerClient extends Application {
                     fileOutputStreamToMakeMp3iles = new FileOutputStream(fileReceivedFromServer);
                     long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
                     System.out.println(size);
+                    if (size == -1) {
+                        Platform.runLater(new Runnable() { // runs this code on main thread where JavaFx stuff is
+                            @Override
+                            public void run() {
+                                searchSongMessageLabel.setText("song not in library!");
+                            }
+                        });
+                        return;
+                        //dataInputStreamToReceiveFiles.reset();
+
+                    }
                     byte[] buffer = new byte[4 * 1024];
                     while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
                         fileOutputStreamToMakeMp3iles.write(buffer, 0, bytes);

@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.FieldPosition;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import javafx.application.Application;
@@ -28,22 +29,26 @@ import javafx.stage.Stage;
 
 public class MusicPlayerClient extends Application {
 
-    private static final int PORT1 = 1234;
-    private static final int PORT2 = 4321;
-    private static final int PORT3 = 1324;
+    private static final int PORT1 = 1222;
+    private static final int PORT2 = 2111;
+    private static final int PORT3 = 3333;
     private Socket socket1;
     private Socket socket2;
     private Socket socket3;
     private DataOutputStream dataOutputStream;
     private DataInputStream dataInputStreamToReceiveFiles;
     private ObjectOutputStream objectOutputStreamToServer;
+    private ObjectInputStream objectInputStreamFromServer;
     private FileInputStream fileInputStream;
     private PrintWriter stringOutputStream;
 
     private Scene scene;
+
     private Label searchSongMessageLabel;
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
+
+    private ArrayList<Song> allSongs = new ArrayList<Song>();
 
     public MusicPlayerClient() {
         InetAddress host;
@@ -56,18 +61,28 @@ public class MusicPlayerClient extends Application {
             dataOutputStream = new DataOutputStream(socket1.getOutputStream());
             dataInputStreamToReceiveFiles = new DataInputStream(socket1.getInputStream());
             objectOutputStreamToServer = new ObjectOutputStream(socket2.getOutputStream());
+            objectInputStreamFromServer = new ObjectInputStream(socket2.getInputStream());
             stringOutputStream = new PrintWriter(socket3.getOutputStream());
+
+            allSongs = (ArrayList<Song>) objectInputStreamFromServer.readObject();
         } catch (UnknownHostException unknownHostException) {
             System.out.println("\nHost not found!");
             System.exit(1);
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
 
     }
 
     public static void main(String[] args) {
+
+
+
         launch(args);
+
+
     }
 
 
@@ -178,6 +193,7 @@ public class MusicPlayerClient extends Application {
         searchASongStage.setTitle("search a song");
 
         TextField searchBar = new TextField();
+        Label messageLabel = new Label();
         searchSongMessageLabel = new Label();
         Button searchButton = new Button("search");
         searchButton.setOnAction(new EventHandler<ActionEvent>() {
@@ -186,6 +202,7 @@ public class MusicPlayerClient extends Application {
                 try {
                     searchASong(searchBar.getText());
                 } catch (Exception e) {
+                    messageLabel.setText("song could not be searched!");
                     searchSongMessageLabel.setText("song could not be searched!");
                     throw new RuntimeException(e);
                 }
@@ -270,6 +287,7 @@ public class MusicPlayerClient extends Application {
         }).start();
     }
 }
+
 
 
 

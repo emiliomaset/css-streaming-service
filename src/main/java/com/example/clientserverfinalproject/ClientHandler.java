@@ -2,8 +2,7 @@ package com.example.clientserverfinalproject;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -35,7 +34,26 @@ public class ClientHandler extends Thread {
             objectOutputStreamToClient = new ObjectOutputStream(clientSocket2.getOutputStream());
             objectInputStreamFromClient = new ObjectInputStream(clientSocket2.getInputStream());
             stringInputFromClient = new Scanner(clientSocket3.getInputStream());
+            ObjectInputStream objectInputStreamFromSongLibrary = new ObjectInputStream(new FileInputStream("songlibrary.dat"));
+
+            try {
+                while (true) { // since you cannot append to files with serialized objects between runs, one must recreate the songlibrary.dat file each run
+                    allSongs.add((Song) objectInputStreamFromSongLibrary.readObject());
+                }
+            } catch(Exception e) { // catch EOF
+
+            }
+
+            Files.delete(Paths.get("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/songlibrary.dat/"));
             objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.dat", true));
+            for (Song song : allSongs) {
+                System.out.println(song);
+                objectOutputStreamToWriteToSongLibrary.writeObject(song);
+            }
+
+            objectOutputStreamToClient.writeObject(allSongs);
+
+            System.out.println(allSongs);
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
@@ -94,7 +112,6 @@ public class ClientHandler extends Thread {
                     try {
                         dataOutputStreamToSendFiles.writeLong(-1); //if song is not found in database, send -1
                     } catch (IOException e) {
-                        throw new RuntimeException(e);
                     }
                 }
             }
@@ -169,3 +186,4 @@ public class ClientHandler extends Thread {
 
     // ===========================================================================================================================
 }
+

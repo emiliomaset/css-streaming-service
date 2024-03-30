@@ -8,11 +8,11 @@ public class MusicPlayerServer {
     private static ServerSocket serverSocket1;
     private static ServerSocket serverSocket2;
     private static ServerSocket serverSocket3;
-    private static final int PORT1 = 1234;
-    private static final int PORT2 = 4321;
-    private static final int PORT3 = 1324;
+    private static final int PORT1 = 1222;
+    private static final int PORT2 = 2111;
+    private static final int PORT3 = 3333;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         try {
             serverSocket1 = new ServerSocket(PORT1);

@@ -4,27 +4,26 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.text.FieldPosition;
 import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class MusicPlayerClient extends Application {
 
@@ -42,15 +41,17 @@ public class MusicPlayerClient extends Application {
     private PrintWriter stringOutputStream;
 
     private Scene scene;
-    private Label titleOfSongCurrentlyPlaying;
-    private Label artistOfSongCurrentlyPlaying;
+    private Label titleOfSongCurrentlyPlayingLabel;
+    private Label artistOfSongCurrentlyPlayingLabel;
 
     private Label searchSongMessageLabel;
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
     private long size;
 
-    private ArrayList<Song> allSongs = new ArrayList<Song>();
+    private ArrayList<Song> allSongs = new ArrayList<>();
+
+    private ArrayList<Song> songQueue = new ArrayList<>();
 
     public MusicPlayerClient() {
         InetAddress host;
@@ -78,10 +79,12 @@ public class MusicPlayerClient extends Application {
 
     }
 
+
     public static void main(String[] args) {
         launch(args);
     }
 
+    // ===========================================================================================================================
 
     @Override
     public void start(Stage primaryStage) {
@@ -91,6 +94,9 @@ public class MusicPlayerClient extends Application {
 
         Button pauseButton = new Button("Pause");
         pauseButton.setOnAction(e -> pauseSong());
+
+        Button skipButton = new Button("Skip");
+        skipButton.setOnAction(e -> skipSong());
 
         Button addSongButton = new Button("Add song");
         addSongButton.setOnAction(e -> addSongMenuCreator());
@@ -103,13 +109,20 @@ public class MusicPlayerClient extends Application {
 
         Slider volumeSlider = new Slider();
 
-        HBox hBox = new HBox(playButton, pauseButton, addSongButton, viewAllSongs, searchASong, volumeSlider);
-        hBox.setAlignment(Pos.BOTTOM_CENTER);
+        HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewAllSongs, searchASong, volumeSlider);
+        buttonsHbox.setAlignment(Pos.BOTTOM_CENTER);
 
-        titleOfSongCurrentlyPlaying = new Label();
-        artistOfSongCurrentlyPlaying = new Label();
 
-        scene = new Scene(hBox);
+        titleOfSongCurrentlyPlayingLabel = new Label();
+        artistOfSongCurrentlyPlayingLabel = new Label();
+
+        VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel);
+        labelsVbox.setAlignment(Pos.CENTER);
+
+        VBox vbox = new VBox(labelsVbox, buttonsHbox);
+        vbox.setSpacing(210);
+
+        scene = new Scene(vbox);
         primaryStage.setScene(scene);
         primaryStage.setHeight(300);
         primaryStage.setWidth(700);
@@ -118,12 +131,16 @@ public class MusicPlayerClient extends Application {
 
     }
 
+    // ===========================================================================================================================
+
     public void setMediaPlayer(String mp3FileName) {
         if (!(mediaPlayer == null)) // making sure songs dont overlap
             mediaPlayer.pause();
         Media hit = new Media(new File(mp3FileName).toURI().toString());
         mediaPlayer = new MediaPlayer(hit);
     }
+
+    // ===========================================================================================================================
 
     public void playSong() {
         if (new File("dummy2.mp3").exists()){
@@ -133,9 +150,29 @@ public class MusicPlayerClient extends Application {
 
     }
 
+    // ===========================================================================================================================
+
     public void pauseSong() {
         mediaPlayer.pause();
     }
+
+    // ===========================================================================================================================
+
+    public void skipSong() {
+        System.out.println("queue" + songQueue);
+        if (songQueue.size() == 1) {
+            mediaPlayer.pause();
+            mediaPlayer.seek(Duration.ZERO);
+            return;
+        }
+        songQueue.remove(0);
+        searchASong(songQueue.get(0).getSongTitle());
+        titleOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getSongTitle());
+        artistOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getArtist());
+        playSong();
+    }
+
+    // ===========================================================================================================================
 
     public void addSongMenuCreator() {
 
@@ -192,6 +229,8 @@ public class MusicPlayerClient extends Application {
         addSongStage.show();
     }
 
+    // ===========================================================================================================================
+
     public void viewAllSongsMenuCreator() {
         Stage viewALlSongsStage = new Stage();
         viewALlSongsStage.setTitle("all songs in library");
@@ -201,25 +240,33 @@ public class MusicPlayerClient extends Application {
         ArrayList<Label> songCardTitleAndArtistLabelList = new ArrayList<>();
         ArrayList<Button> songCardPlayButtonList = new ArrayList<>();
         ArrayList<Button> songCardDownloadButtonList = new ArrayList<>();
+        ArrayList<Button> songCardQueueButtonList = new ArrayList<>();
 
 
         for (int i = 0; i < allSongs.size(); i++) {
             songCardTitleAndArtistLabelList.add(new Label(allSongs.get(i).getSongTitle() + " - " + allSongs.get(i).getArtist()));
             songCardPlayButtonList.add(new Button("play"));
             songCardDownloadButtonList.add(new Button("download"));
+            songCardQueueButtonList.add(new Button("queue"));
             int finalI = i;
             songCardPlayButtonList.get(i).setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent actionEvent) {
                     try {
+                        songQueue.add(0, allSongs.get(finalI));
+                        for (Song song : songQueue)
+                            System.out.println("queue: " + song.getSongTitle());
                         searchASong(allSongs.get(finalI).getSongTitle());
                         Thread.sleep(265);
+                        titleOfSongCurrentlyPlayingLabel.setText(allSongs.get(finalI).getSongTitle());
+                        artistOfSongCurrentlyPlayingLabel.setText(allSongs.get(finalI).getArtist());
                         playSong();
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
             });
+
             songCardDownloadButtonList.get(i).setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent actionEvent) {
@@ -232,7 +279,19 @@ public class MusicPlayerClient extends Application {
                     }
                 }
             });
-            songCards.add(new HBox(songCardTitleAndArtistLabelList.get(i), songCardPlayButtonList.get(i), songCardDownloadButtonList.get(i)));
+
+            songCardQueueButtonList.get(i).setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent actionEvent) {
+                    songQueue.add(allSongs.get(finalI));
+                    for (Song song : songQueue)
+                        System.out.println(song.getSongTitle());
+
+                }
+            });
+            songCards.add(new HBox(songCardTitleAndArtistLabelList.get(i), songCardPlayButtonList.get(i), songCardDownloadButtonList.get(i), songCardQueueButtonList.get(i)));
+            songCards.get(i).setSpacing(5);
+            //songCards.get(i).setStyle("-fx-border-color: blue");
         }
 
         VBox vbox = new VBox();
@@ -241,15 +300,11 @@ public class MusicPlayerClient extends Application {
             vbox.getChildren().add(songCard);
         }
 
+        vbox.setPadding(new Insets(10));
+        vbox.setSpacing(20);
+
 
         viewAllSongsScrollPane.setContent(vbox);
-
-//        TextArea allSongsTextArea = new TextArea();
-//        for (Song song : allSongs) {
-//            allSongsTextArea.appendText(song.getSongTitle() + " - " + song.getArtist() + "\n");
-//        }
-
-
 
         Scene viewAllSongsScene = new Scene(viewAllSongsScrollPane);
 
@@ -258,9 +313,9 @@ public class MusicPlayerClient extends Application {
         viewALlSongsStage.setHeight(400);
         viewALlSongsStage.setResizable(false);
         viewALlSongsStage.show();
-
-
     }
+
+    // ===========================================================================================================================
 
     public void searchASongMenuCreator() {
         Stage searchASongStage = new Stage();
@@ -283,8 +338,6 @@ public class MusicPlayerClient extends Application {
             }
         });
 
-
-
         VBox searchVbox = new VBox(searchBar, searchButton, searchSongMessageLabel);
 
         Scene searchASongScene = new Scene(searchVbox);
@@ -296,14 +349,16 @@ public class MusicPlayerClient extends Application {
         searchASongStage.show();
     }
 
-    public void searchASong(String search) throws Exception {
+    // ===========================================================================================================================
+
+    public void searchASong(String search){
         stringOutputStream.println(search);
-        System.out.println(search);
+        System.out.println("searching: "  + search);
         stringOutputStream.flush();
         receiveASong();
     }
 
-
+    // ===========================================================================================================================
 
     public void sendSong(Song song) throws Exception {
         int bytes = 0;
@@ -325,15 +380,17 @@ public class MusicPlayerClient extends Application {
 
     }
 
-    public void receiveASong() throws Exception {
+    // ===========================================================================================================================
+
+    public void receiveASong() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 int bytes = 0;
                 File fileReceivedFromServer = new File("dummy2.mp3"); // create dummy file to store song in // delete after use?
-                FileOutputStream fileOutputStreamToMakeMp3iles;
+                FileOutputStream fileOutputStreamToMakeMp3files;
                 try {
-                    fileOutputStreamToMakeMp3iles = new FileOutputStream(fileReceivedFromServer);
+                    fileOutputStreamToMakeMp3files = new FileOutputStream(fileReceivedFromServer);
                     size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
                     System.out.println(size);
                     if (size == -1) {
@@ -349,23 +406,34 @@ public class MusicPlayerClient extends Application {
                     }
                     byte[] buffer = new byte[4 * 1024];
                     while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
-                        fileOutputStreamToMakeMp3iles.write(buffer, 0, bytes);
+                        fileOutputStreamToMakeMp3files.write(buffer, 0, bytes);
                         size -= bytes;
                     }
-                    fileOutputStreamToMakeMp3iles.flush();
+                    fileOutputStreamToMakeMp3files.flush();
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
-
-
-
             }
         }).start();
     }
+
+    // ===========================================================================================================================
+
+    public void queueHandler() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                mediaPlayer.setOnEndOfMedia(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (songQueue.size() > 1) {
+                            searchASong(songQueue.get(1).getSongTitle());
+                            songQueue.remove(0);
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
 }
-
-
-
-
-
-

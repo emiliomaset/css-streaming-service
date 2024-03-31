@@ -17,12 +17,7 @@ public class ClientHandler extends Thread {
     private ObjectOutputStream objectOutputStreamToWriteToSongLibrary;
     private Scanner stringInputFromClient;
 
-    //create file of Song objects whose files are currently in the song-database when receiving a song,
-    // then access this file and loop through it when a song is searched.
-    // when found, send this Song object to sendSong() method.
-
-
-    private ArrayList<Song> allSongs = new ArrayList<Song>();
+    private ArrayList<Song> allSongs = new ArrayList<>();
 
     public ClientHandler(Socket socket1, Socket socket2, Socket socket3) {
         this.clientSocket1 = socket1;
@@ -63,8 +58,7 @@ public class ClientHandler extends Thread {
     public void run() {
         try {
             sendASongToSongLibraryFile();
-            analyzeSearch(); // doesnt like this.
-            //mp3 files arent added to mp3-database, only kept in dummy.mp3, and objects arent written to songlibrary.dat
+            analyzeSearch();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -76,7 +70,6 @@ public class ClientHandler extends Thread {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println(clientSocket2.isConnected());
                 while (clientSocket2.isConnected()) {
                     ObjectInputStream databaseObjectInputStream = null;
                     try {
@@ -111,6 +104,7 @@ public class ClientHandler extends Thread {
                         }
                     }
                     catch (ClassNotFoundException e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -162,16 +156,16 @@ public class ClientHandler extends Thread {
     public Song receiveASong() throws Exception {
         int bytes = 0;
         File file = new File("dummy.mp3"); // create dummy file to store song in // just make this file in mp3 database
-        FileOutputStream fileOutputStreamToMakeMp3iles = new FileOutputStream(file);
+        FileOutputStream fileOutputStreamToMakeMp3Files = new FileOutputStream(file);
 
         long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
         byte[] buffer = new byte[4 * 1024];
         while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
-            fileOutputStreamToMakeMp3iles.write(buffer, 0, bytes);
+            fileOutputStreamToMakeMp3Files.write(buffer, 0, bytes);
             size -= bytes;
         }
 
-        fileOutputStreamToMakeMp3iles.flush();
+        fileOutputStreamToMakeMp3Files.flush();
 
         Song song = (Song) objectInputStreamFromClient.readObject();
 

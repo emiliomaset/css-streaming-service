@@ -4,23 +4,24 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.PriorityQueue;
-import java.util.Queue;
+import java.util.*;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -48,6 +49,11 @@ public class MusicPlayerClient extends Application {
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
     private long size;
+    private ProgressBar songScrubber;
+    private Timer timer;
+    private TimerTask timerTask;
+    private boolean playing;
+    private double currentPlayingPos;
 
     private ArrayList<Song> allSongs = new ArrayList<>();
 
@@ -79,7 +85,6 @@ public class MusicPlayerClient extends Application {
 
     }
 
-
     public static void main(String[] args) {
         launch(args);
     }
@@ -108,6 +113,13 @@ public class MusicPlayerClient extends Application {
         viewAllSongs.setOnAction(e -> viewAllSongsMenuCreator());
 
         Slider volumeSlider = new Slider();
+        volumeSlider.setValue(50);
+        volumeSlider.valueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observableValue, Number number, Number t1) {
+                mediaPlayer.setVolume(volumeSlider.getValue() * 0.01);
+            }
+        });
 
         HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewAllSongs, searchASong, volumeSlider);
         buttonsHbox.setAlignment(Pos.BOTTOM_CENTER);
@@ -116,11 +128,31 @@ public class MusicPlayerClient extends Application {
         titleOfSongCurrentlyPlayingLabel = new Label();
         artistOfSongCurrentlyPlayingLabel = new Label();
 
-        VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel);
+        songScrubber = new ProgressBar();
+        songScrubber.setMaxWidth(600);
+        songScrubber.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) {
+                if (mediaPlayer == null)
+                    return;
+
+                Bounds boundsOfSongScrubber = songScrubber.getBoundsInLocal();
+                double xOfSongScrubberMouseClick = mouseEvent.getSceneX();
+                double posToMoveScrubberProgressTo = (((xOfSongScrubberMouseClick - boundsOfSongScrubber.getMinX() ) * 100) / boundsOfSongScrubber.getMaxX());
+                posToMoveScrubberProgressTo -= 7.75;
+                posToMoveScrubberProgressTo /= 100;
+                songScrubber.setProgress(posToMoveScrubberProgressTo);
+                mediaPlayer.seek(Duration.millis( posToMoveScrubberProgressTo * mediaPlayer.getTotalDuration().toMillis()));
+                currentPlayingPos = posToMoveScrubberProgressTo * mediaPlayer.getTotalDuration().toMillis();
+            }
+        });
+
+
+        VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel, songScrubber);
         labelsVbox.setAlignment(Pos.CENTER);
 
         VBox vbox = new VBox(labelsVbox, buttonsHbox);
-        vbox.setSpacing(210);
+        //vbox.setSpacing(150);
 
         scene = new Scene(vbox);
         primaryStage.setScene(scene);
@@ -128,6 +160,7 @@ public class MusicPlayerClient extends Application {
         primaryStage.setWidth(700);
         primaryStage.setResizable(false);
         primaryStage.show();
+
 
     }
 
@@ -142,12 +175,62 @@ public class MusicPlayerClient extends Application {
 
     // ===========================================================================================================================
 
-    public void playSong() {
-        if (new File("dummy2.mp3").exists()){
-            setMediaPlayer("dummy2.mp3");
-            mediaPlayer.play();
-        }
+    public void setTimer() {
+        timer = new Timer();
 
+        timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                playing = true;
+
+                currentPlayingPos = mediaPlayer.getCurrentTime().toSeconds();
+                double endTime = mediaPlayer.getTotalDuration().toSeconds(); // ?
+
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        songScrubber.setProgress(currentPlayingPos / endTime);
+                    }
+                });
+
+                if (currentPlayingPos / endTime == 1) {
+
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            songScrubber.setProgress(0);
+                        }
+                    });
+                    cancelTimer();
+                    //mediaPlayer.seek(Duration.millis(0)); /// autoplay??
+                }
+
+            }
+        };
+
+        timer.schedule(timerTask, 500, 500);
+
+    }
+
+    // ===========================================================================================================================
+
+    public void cancelTimer() {
+        playing = false;
+        timer.cancel();
+    }
+
+    // ===========================================================================================================================
+
+    public void setMediaPlayer() {
+        if (new File("dummy2.mp3").exists()) {
+            setMediaPlayer("dummy2.mp3");
+        }
+    }
+
+    // ===========================================================================================================================
+
+    public void playSong() {
+        mediaPlayer.play();
     }
 
     // ===========================================================================================================================
@@ -159,8 +242,7 @@ public class MusicPlayerClient extends Application {
     // ===========================================================================================================================
 
     public void skipSong() {
-        System.out.println("queue" + songQueue);
-        if (songQueue.size() == 1) {
+        if (songQueue.size() == 1) { // prevents song overlap
             mediaPlayer.pause();
             mediaPlayer.seek(Duration.ZERO);
             return;
@@ -169,6 +251,7 @@ public class MusicPlayerClient extends Application {
         searchASong(songQueue.get(0).getSongTitle());
         titleOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getSongTitle());
         artistOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getArtist());
+        setMediaPlayer();
         playSong();
     }
 
@@ -202,6 +285,11 @@ public class MusicPlayerClient extends Application {
             @Override
             public void handle(ActionEvent actionEvent) {
                 try {
+                    if (songTitleTextField.getText().isEmpty() || artistNameTextField.getText().isEmpty()
+                            || mp3FileTextField.getText().isEmpty()) {
+                        messageSentLabel.setText("all fields must be filled out!");
+                        return;
+                    }
                     sendSong(new Song(songTitleTextField.getText(), artistNameTextField.getText(), mp3FileChosenByUser));
                     messageSentLabel.setText("song successfully added to library!");
                     songTitleTextField.setText("");
@@ -254,13 +342,14 @@ public class MusicPlayerClient extends Application {
                 public void handle(ActionEvent actionEvent) {
                     try {
                         songQueue.add(0, allSongs.get(finalI));
-                        for (Song song : songQueue)
-                            System.out.println("queue: " + song.getSongTitle());
                         searchASong(allSongs.get(finalI).getSongTitle());
-                        Thread.sleep(265);
+                        Thread.sleep(265); // ensure time to download file
                         titleOfSongCurrentlyPlayingLabel.setText(allSongs.get(finalI).getSongTitle());
                         artistOfSongCurrentlyPlayingLabel.setText(allSongs.get(finalI).getArtist());
+                        setMediaPlayer();
                         playSong();
+                        setTimer();
+                        queueHandler();
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -284,9 +373,6 @@ public class MusicPlayerClient extends Application {
                 @Override
                 public void handle(ActionEvent actionEvent) {
                     songQueue.add(allSongs.get(finalI));
-                    for (Song song : songQueue)
-                        System.out.println(song.getSongTitle());
-
                 }
             });
             songCards.add(new HBox(songCardTitleAndArtistLabelList.get(i), songCardPlayButtonList.get(i), songCardDownloadButtonList.get(i), songCardQueueButtonList.get(i)));
@@ -302,7 +388,6 @@ public class MusicPlayerClient extends Application {
 
         vbox.setPadding(new Insets(10));
         vbox.setSpacing(20);
-
 
         viewAllSongsScrollPane.setContent(vbox);
 
@@ -353,7 +438,6 @@ public class MusicPlayerClient extends Application {
 
     public void searchASong(String search){
         stringOutputStream.println(search);
-        System.out.println("searching: "  + search);
         stringOutputStream.flush();
         receiveASong();
     }
@@ -392,7 +476,6 @@ public class MusicPlayerClient extends Application {
                 try {
                     fileOutputStreamToMakeMp3files = new FileOutputStream(fileReceivedFromServer);
                     size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
-                    System.out.println(size);
                     if (size == -1) {
                         Platform.runLater(new Runnable() { // runs this code on main thread where JavaFx stuff is
                             @Override
@@ -419,21 +502,29 @@ public class MusicPlayerClient extends Application {
 
     // ===========================================================================================================================
 
-    public void queueHandler() {
-        new Thread(new Runnable() {
+    public void queueHandler() { // needs work
+        mediaPlayer.setOnEndOfMedia(new Runnable() {
             @Override
             public void run() {
-                mediaPlayer.setOnEndOfMedia(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (songQueue.size() > 1) {
-                            searchASong(songQueue.get(1).getSongTitle());
-                            songQueue.remove(0);
-                        }
-                    }
-                });
+                if (songQueue.size() > 1) {
+                    searchASong(songQueue.get(1).getSongTitle());
+                    songQueue.remove(0);
+                    titleOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getSongTitle());
+                    artistOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getArtist());
+                    setMediaPlayer();
+                    queueHandler();
+                    playSong();
+                    return;
+                }
+
+                if (songQueue.size() == 1) {
+                    mediaPlayer.seek(new Duration(0));
+                    mediaPlayer.pause();
+                }
             }
-        }).start();
+        });
     }
+
+    // ===========================================================================================================================
 
 }

@@ -22,13 +22,15 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 public class MusicPlayerClient extends Application {
 
-    private static final int PORT1 = 1222;
+    private static final int PORT1 = 1455;
     private static final int PORT2 = 2111;
     private static final int PORT3 = 3333;
     private Socket socket1;
@@ -44,7 +46,8 @@ public class MusicPlayerClient extends Application {
     private Scene scene;
     private Label titleOfSongCurrentlyPlayingLabel;
     private Label artistOfSongCurrentlyPlayingLabel;
-
+    private Label currentSongPosLabel;
+    private Label songTotalDurationLabel;
     private Label searchSongMessageLabel;
     private MediaPlayer mediaPlayer;
     private File mp3FileChosenByUser;
@@ -123,13 +126,17 @@ public class MusicPlayerClient extends Application {
 
         HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewAllSongs, searchASong, volumeSlider);
         buttonsHbox.setAlignment(Pos.BOTTOM_CENTER);
+        buttonsHbox.setSpacing(2);
 
 
         titleOfSongCurrentlyPlayingLabel = new Label();
+        titleOfSongCurrentlyPlayingLabel.setFont(new Font(24));
+
         artistOfSongCurrentlyPlayingLabel = new Label();
+        artistOfSongCurrentlyPlayingLabel.setFont(new Font(16));
 
         songScrubber = new ProgressBar();
-        songScrubber.setMaxWidth(600);
+        songScrubber.setPrefWidth(600);
         songScrubber.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent mouseEvent) {
@@ -148,15 +155,24 @@ public class MusicPlayerClient extends Application {
         });
 
 
-        VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel, songScrubber);
+        VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel);
         labelsVbox.setAlignment(Pos.CENTER);
+        labelsVbox.setSpacing(7);
 
-        VBox vbox = new VBox(labelsVbox, buttonsHbox);
+        currentSongPosLabel = new Label();
+        currentSongPosLabel.setTextAlignment(TextAlignment.CENTER);
+        songTotalDurationLabel = new Label();
+        songTotalDurationLabel.setTextAlignment(TextAlignment.CENTER);
+        HBox songDurationAndSongScrubberHbox = new HBox(currentSongPosLabel, songScrubber, songTotalDurationLabel);
+        songDurationAndSongScrubberHbox.setAlignment(Pos.CENTER);
+        songDurationAndSongScrubberHbox.setSpacing(2);
+
+        VBox vbox = new VBox(labelsVbox, songDurationAndSongScrubberHbox, buttonsHbox);
         //vbox.setSpacing(150);
 
         scene = new Scene(vbox);
         primaryStage.setScene(scene);
-        primaryStage.setHeight(300);
+        primaryStage.setHeight(250);
         primaryStage.setWidth(700);
         primaryStage.setResizable(false);
         primaryStage.show();
@@ -190,6 +206,8 @@ public class MusicPlayerClient extends Application {
                     @Override
                     public void run() {
                         songScrubber.setProgress(currentPlayingPos / endTime);
+                        songTotalDurationLabel.setText( (int) (mediaPlayer.getTotalDuration().toSeconds() / 60) +  ":" + String.format("%02d", (int) (mediaPlayer.getTotalDuration().toSeconds() % 60)));
+                        currentSongPosLabel.setText( (int) (mediaPlayer.getCurrentTime().toSeconds() / 60) +  ":" + String.format("%02d", (int) (mediaPlayer.getCurrentTime().toSeconds() % 60)));
                     }
                 });
 
@@ -198,6 +216,7 @@ public class MusicPlayerClient extends Application {
                     Platform.runLater(new Runnable() {
                         @Override
                         public void run() {
+                            currentSongPosLabel.setText("0:00");
                             songScrubber.setProgress(0);
                         }
                     });

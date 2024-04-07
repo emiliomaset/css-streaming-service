@@ -15,9 +15,12 @@ import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
@@ -92,7 +95,7 @@ public class MusicPlayerClient extends Application {
     // ===========================================================================================================================
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws FileNotFoundException {
 
         Button playButton = new Button("Play");
         playButton.setOnAction(e -> playSong());
@@ -120,17 +123,22 @@ public class MusicPlayerClient extends Application {
             }
         });
 
-        HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewAllSongs, volumeSlider);
-        buttonsHbox.setAlignment(Pos.BOTTOM_CENTER);
-        buttonsHbox.setSpacing(2);
-        buttonsHbox.setLayoutY(200);
+
+        InputStream stream = new FileInputStream("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/volumeicon.png/");
+        Image img = new Image(stream);
+        ImageView imageView = new ImageView(img);
+        imageView.setFitHeight(20);
+        imageView.setFitWidth(20);
+        HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewAllSongs, imageView, volumeSlider);
+        buttonsHbox.setSpacing(5);
+        buttonsHbox.setAlignment(Pos.CENTER);
 
 
         titleOfSongCurrentlyPlayingLabel = new Label();
-        titleOfSongCurrentlyPlayingLabel.setFont(new Font(24));
+        titleOfSongCurrentlyPlayingLabel.setFont(new Font(28));
 
         artistOfSongCurrentlyPlayingLabel = new Label();
-        artistOfSongCurrentlyPlayingLabel.setFont(new Font(16));
+        artistOfSongCurrentlyPlayingLabel.setFont(new Font(20));
 
         songScrubber = new ProgressBar();
         songScrubber.setPrefWidth(600);
@@ -154,19 +162,20 @@ public class MusicPlayerClient extends Application {
 
 
         VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel);
-        labelsVbox.setAlignment(Pos.CENTER);
         labelsVbox.setSpacing(7);
+        labelsVbox.setPadding(new Insets(20));
+        labelsVbox.setAlignment(Pos.CENTER);
 
         currentSongPosLabel = new Label();
-        currentSongPosLabel.setTextAlignment(TextAlignment.CENTER);
+        currentSongPosLabel.setTextAlignment(TextAlignment.LEFT);
         songTotalDurationLabel = new Label();
-        songTotalDurationLabel.setTextAlignment(TextAlignment.CENTER);
+        songTotalDurationLabel.setTextAlignment(TextAlignment.LEFT);
         HBox songDurationAndSongScrubberHbox = new HBox(currentSongPosLabel, songScrubber, songTotalDurationLabel);
         songDurationAndSongScrubberHbox.setAlignment(Pos.CENTER);
-        songDurationAndSongScrubberHbox.setSpacing(2);
+        songDurationAndSongScrubberHbox.setSpacing(12);
 
         VBox vbox = new VBox(labelsVbox, songDurationAndSongScrubberHbox, buttonsHbox);
-        //vbox.setSpacing(150);
+        vbox.setSpacing(32);
 
         scene = new Scene(vbox);
         primaryStage.setScene(scene);

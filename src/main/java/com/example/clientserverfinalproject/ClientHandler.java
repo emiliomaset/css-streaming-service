@@ -36,7 +36,6 @@ public class ClientHandler extends Thread {
                     allSongs.add((Song) objectInputStreamFromSongLibrary.readObject());
                 }
             } catch(Exception e) { // catch EOF
-
             }
 
             Files.delete(Paths.get("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/songlibrary.dat/"));

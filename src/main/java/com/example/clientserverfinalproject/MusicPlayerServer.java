@@ -12,7 +12,7 @@ public class MusicPlayerServer {
     private static final int PORT2 = 2111;
     private static final int PORT3 = 3333;
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException {
 
         try {
             serverSocket1 = new ServerSocket(PORT1);

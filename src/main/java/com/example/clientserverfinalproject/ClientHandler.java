@@ -78,12 +78,9 @@ public class ClientHandler extends Thread {
                     }
 
                     String searchedSong = stringInputFromClient.nextLine();
-                    System.out.println();
-                    System.out.println("seraching for: " + searchedSong);
                     try {
                         while (true) {
                             Song o = (Song) databaseObjectInputStream.readObject();
-                            System.out.println(o.getSongTitle());
                             if (o.getSongTitle().equals(searchedSong))
                                 try {
                                     sendSongToClient(o);
@@ -96,11 +93,7 @@ public class ClientHandler extends Thread {
                                 }
                         }
                     } catch (IOException e) {
-                        try {
-                            dataOutputStreamToSendFiles.writeLong(-1); //if song is not found in database, send -1
-                        } catch (IOException ex) {
-                            throw new RuntimeException(ex);
-                        }
+                        e.printStackTrace();
                     }
                     catch (ClassNotFoundException e) {
                         e.printStackTrace();
@@ -113,14 +106,13 @@ public class ClientHandler extends Thread {
     // ===========================================================================================================================
 
     public void sendSongToClient(Song song) throws Exception {
-        System.out.println("sendSongToClient() activated");
         int bytes = 0;
         File file = song.getMp3File();
         FileInputStream fileInputStream = new FileInputStream(file);
 
         dataOutputStreamToSendFiles.writeLong(file.length());
         dataOutputStreamToSendFiles.flush();
-        byte[] buffer = new byte[4 * 1024];
+        byte[] buffer = new byte[5000];
         while ((bytes = fileInputStream.read(buffer)) != -1) {
             dataOutputStreamToSendFiles.write(buffer, 0, bytes);
             dataOutputStreamToSendFiles.flush();
@@ -141,7 +133,6 @@ public class ClientHandler extends Thread {
                         allSongs.add(song);
                         objectOutputStreamToWriteToSongLibrary.writeObject(song);
                         objectOutputStreamToWriteToSongLibrary.flush();
-                        //objectOutputStreamToWriteToSongLibrary.reset();
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -158,7 +149,7 @@ public class ClientHandler extends Thread {
         FileOutputStream fileOutputStreamToMakeMp3Files = new FileOutputStream(file);
 
         long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
-        byte[] buffer = new byte[4 * 1024];
+        byte[] buffer = new byte[5000];
         while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
             fileOutputStreamToMakeMp3Files.write(buffer, 0, bytes);
             size -= bytes;
@@ -172,11 +163,12 @@ public class ClientHandler extends Thread {
                 Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/"
                         + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
         // rename song file to title of song and move to mp3-database
-        song.setMp3File(new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/" + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
+
+        song.setMp3File(new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/"
+                + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
 
         return song;
     }
 
     // ===========================================================================================================================
 }
-

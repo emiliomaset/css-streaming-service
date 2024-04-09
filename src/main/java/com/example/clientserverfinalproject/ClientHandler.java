@@ -29,19 +29,19 @@ public class ClientHandler extends Thread {
             objectOutputStreamToClient = new ObjectOutputStream(clientSocket2.getOutputStream());
             objectInputStreamFromClient = new ObjectInputStream(clientSocket2.getInputStream());
             stringInputFromClient = new Scanner(clientSocket3.getInputStream());
-            ObjectInputStream objectInputStreamFromSongLibrary = new ObjectInputStream(new FileInputStream("songlibrary.dat"));
+            ObjectInputStream objectInputStreamFromSongLibrary = new ObjectInputStream(new FileInputStream("songlibrary.ser"));
 
             try {
-                while (true) { // since you cannot append to files with serialized objects between runs, one must recreate the songlibrary.dat file each run
+                while (true) { // since you cannot append to files with serialized objects between runs, one must recreate the songlibrary.ser file each run
                     allSongs.add((Song) objectInputStreamFromSongLibrary.readObject());
                 }
             } catch(Exception e) { // catch EOF
             }
 
-            Files.delete(Paths.get("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/songlibrary.dat/"));
-            objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.dat", true));
+            Files.delete(Paths.get("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/songlibrary.ser/"));
+            objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.ser", true));
             for (Song song : allSongs) {
-                objectOutputStreamToWriteToSongLibrary.writeObject(song);
+                objectOutputStreamToWriteToSongLibrary.writeObject(song); // populating songlibrary.ser file
             }
 
             objectOutputStreamToClient.writeObject(allSongs);
@@ -72,7 +72,7 @@ public class ClientHandler extends Thread {
                 while (clientSocket2.isConnected()) {
                     ObjectInputStream databaseObjectInputStream = null;
                     try {
-                        databaseObjectInputStream = new ObjectInputStream(new FileInputStream("songlibrary.dat"));
+                        databaseObjectInputStream = new ObjectInputStream(new FileInputStream("songlibrary.ser"));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

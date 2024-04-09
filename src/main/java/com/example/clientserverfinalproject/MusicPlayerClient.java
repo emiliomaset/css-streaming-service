@@ -85,7 +85,8 @@ public class MusicPlayerClient extends Application {
             System.exit(1);
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        }
+        catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
@@ -131,12 +132,12 @@ public class MusicPlayerClient extends Application {
                                                                                 // this change will then run changed method
             @Override
             public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
-                mediaPlayer.setVolume(volumeSlider.getValue() * 0.01);
+                mediaPlayer.setVolume(volumeSlider.getValue() * 0.02);
             }
         });
 
 
-        InputStream stream = new FileInputStream("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/volumeicon.png/");
+        InputStream stream = new FileInputStream("volumeicon.png/");
         Image img = new Image(stream);
         ImageView imageView = new ImageView(img);
         imageView.setFitHeight(20);
@@ -304,7 +305,7 @@ public class MusicPlayerClient extends Application {
         }
         songQueue.remove(0);
         searchASong(songQueue.get(0).getSongTitle());
-        titleOfSongCurrentlyPlayingLabel.setText("♫ " + songQueue.get(0).getSongTitle() + " ");
+        titleOfSongCurrentlyPlayingLabel.setText("♫ " + songQueue.get(0).getSongTitle() + " ♪");
         artistOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getArtist());
         setMediaPlayer();
         playSong();
@@ -328,23 +329,36 @@ public class MusicPlayerClient extends Application {
         mp3FileLabel.setFont(Font.font("Helvetica", 14));
         mp3FileLabel.setPrefWidth(80);
 
+
+        Button addSongButton = new Button("add");
+        addSongButton.setStyle(getButtonStyling());
+        Label messageSentLabel = new Label();
+
         TextField songTitleTextField = new TextField();
         TextField artistNameTextField = new TextField();
         TextField mp3FileTextField = new TextField();
+        mp3FileTextField.setEditable(false);
         mp3FileTextField.setOnMouseClicked(mouseEvent -> {
+            mp3FileTextField.setText("");
             FileChooser mp3FileChooser = new FileChooser();
             mp3FileChosenByUser = mp3FileChooser.showOpenDialog(addSongStage);
+            if (!mp3FileChosenByUser.toString().contains(".mp3")) {
+                messageSentLabel.setBorder(Border.stroke(Color.RED));
+                messageSentLabel.setText("file must be an .mp3!");
+                addSongButton.setDisable(true);
+                return;
+            }
+            addSongButton.setDisable(false);
+            messageSentLabel.setBorder(Border.EMPTY);
+            messageSentLabel.setText("");
             mp3FileTextField.setText(mp3FileChosenByUser.getName());
-            mp3FileTextField.setEditable(false);
         });
 
         HBox songTitleLabelAndButtonHbox = new HBox(songTitleLabel, songTitleTextField);
         HBox artistNameLabelandTextFieldHbox = new HBox(artistNameLabel, artistNameTextField);
         HBox mp3FileLabelAndTextFieldHbox = new HBox(mp3FileLabel, mp3FileTextField);
 
-        Button addSongButton = new Button("add");
-        addSongButton.setStyle(getButtonStyling());
-        Label messageSentLabel = new Label();
+
         addSongButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
@@ -355,8 +369,7 @@ public class MusicPlayerClient extends Application {
                         messageSentLabel.setBorder(Border.stroke(Color.RED));
                         return;
                     }
-                    messageSentLabel.setBorder(Border.EMPTY);
-                    sendSong(new Song(songTitleTextField.getText(), artistNameTextField.getText(), mp3FileChosenByUser));
+                    sendSong(new Song(songTitleTextField.getText().trim(), artistNameTextField.getText().trim(), mp3FileChosenByUser));
                     messageSentLabel.setText("song successfully added to library!");
                     songTitleTextField.setText("");
                     artistNameTextField.setText("");
@@ -541,7 +554,7 @@ public class MusicPlayerClient extends Application {
                 try {
                     fileOutputStreamToMakeMp3files = new FileOutputStream(fileReceivedFromServer);
                     long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
-                    byte[] buffer = new byte[4 * 1024];
+                    byte[] buffer = new byte[5000];
                     while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
                         fileOutputStreamToMakeMp3files.write(buffer, 0, bytes);
                         size -= bytes;
@@ -592,5 +605,3 @@ public class MusicPlayerClient extends Application {
                 "    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 5, 0.0 , 0 , 1 );";
     }
 }
-
-

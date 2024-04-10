@@ -4,7 +4,7 @@ import java.io.*;
 
 public class SongObjectWriter {
     public static void main (String[] args) throws IOException {
-        sendASongToDatabase(new Song("Eternal Sunshine", "Ariana Grande", new File("/Users/emiliomaset/Downloads/Ariana Grande - eternal sunshine (lyric visualizer).mp3")));
+        sendASongToDatabase(new Song("eternal sunshine", "Ariana Grande", new File("/Users/emiliomaset/Downloads/Ariana Grande - eternal sunshine (lyric visualizer).mp3")));
     }
     public static void sendASongToDatabase(Song song) throws IOException {
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream

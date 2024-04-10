@@ -35,17 +35,18 @@ public class ClientHandler extends Thread {
                 while (true) { // since you cannot append to files with serialized objects between runs, one must recreate the songlibrary.ser file each run
                     allSongs.add((Song) objectInputStreamFromSongLibrary.readObject());
                 }
-            } catch(Exception e) { // catch EOF
+            } catch(Exception e) { // catch songlibrary.ser EOF
             }
 
             Files.delete(Paths.get("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/songlibrary.ser/"));
+
             objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.ser", true));
+
             for (Song song : allSongs) {
                 objectOutputStreamToWriteToSongLibrary.writeObject(song); // populating songlibrary.ser file
             }
 
             objectOutputStreamToClient.writeObject(allSongs);
-
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
@@ -144,15 +145,16 @@ public class ClientHandler extends Thread {
     // ===========================================================================================================================
 
     public Song receiveASong() throws Exception {
-        int bytes = 0;
+        int numOfBytesReadIntoBuffer;
         File file = new File("dummy.mp3"); // create dummy file to store song in // just make this file in mp3 database
         FileOutputStream fileOutputStreamToMakeMp3Files = new FileOutputStream(file);
 
         long size = dataInputStreamToReceiveFiles.readLong(); // get song file size from client
         byte[] buffer = new byte[5000];
-        while (size > 0 && (bytes = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
-            fileOutputStreamToMakeMp3Files.write(buffer, 0, bytes);
-            size -= bytes;
+        while (size > 0 &&
+                ((numOfBytesReadIntoBuffer = dataInputStreamToReceiveFiles.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) ) {
+            fileOutputStreamToMakeMp3Files.write(buffer, 0, numOfBytesReadIntoBuffer);
+            size = size - numOfBytesReadIntoBuffer;
         }
 
         fileOutputStreamToMakeMp3Files.flush();
@@ -162,12 +164,13 @@ public class ClientHandler extends Thread {
         Files.move(Path.of(file.getPath()),
                 Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/"
                         + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
-        // rename song file to title of song and move to mp3-database
+        // move mp3 file to mp3-database directory
 
         song.setMp3File(new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/"
                 + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
+        // rename song object's mp3 file field in preparation for songblibrary.ser storage
 
-        return song;
+        return song; // return song object to place it into songlibrary.ser
     }
 
     // ===========================================================================================================================

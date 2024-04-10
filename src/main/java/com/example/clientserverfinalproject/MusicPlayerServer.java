@@ -8,9 +8,9 @@ public class MusicPlayerServer {
     private static ServerSocket serverSocket1;
     private static ServerSocket serverSocket2;
     private static ServerSocket serverSocket3;
-    private static final int PORT1 = 1455;
-    private static final int PORT2 = 2111;
-    private static final int PORT3 = 3333;
+    private static final int PORT1 = 1433;
+    private static final int PORT2 = 2100;
+    private static final int PORT3 = 3000;
 
     public static void main(String[] args) throws IOException {
 
@@ -23,7 +23,7 @@ public class MusicPlayerServer {
             System.exit(1);
         }
 
-        while (!serverSocket1.isClosed() & !serverSocket2.isClosed()) {
+        while (!serverSocket1.isClosed() & !serverSocket2.isClosed() && !serverSocket3.isClosed()) {
             Socket client1 = serverSocket1.accept();
             Socket client2 = serverSocket2.accept();
             Socket client3 = serverSocket3.accept();

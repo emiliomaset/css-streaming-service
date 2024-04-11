@@ -59,6 +59,7 @@ public class MusicPlayerClient extends Application {
     private ProgressBar songScrubber;
     private Timer timer;
     private double currentPlayingPos;
+    private Stage viewALlSongsStage;
 
     private ArrayList<Song> allSongs = new ArrayList<>();
 
@@ -480,11 +481,15 @@ public class MusicPlayerClient extends Application {
                         return;
                     }
                     sendSong(new Song(songTitleTextField.getText().trim(), artistNameTextField.getText().trim(), mp3FileChosenByUser));
-
                     messageSentLabel.setText("song successfully added to library!");
                     songTitleTextField.setText("");
                     artistNameTextField.setText("");
                     mp3FileTextField.setText("");
+                    if (viewALlSongsStage.isShowing()) {
+                        viewALlSongsStage.close();
+                        viewAllSongsMenuCreator();
+                    }
+
                 } catch (Exception e) {
                     messageSentLabel.setText("song could not be added!");
                     e.printStackTrace();
@@ -520,7 +525,7 @@ public class MusicPlayerClient extends Application {
     public void viewAllSongsMenuCreator() {
 
         viewAllSongsButton.setDisable(true);
-        Stage viewALlSongsStage = new Stage();
+        viewALlSongsStage = new Stage();
         viewALlSongsStage.setTitle("all songs in library");
 
         ScrollPane viewAllSongsScrollPane = new ScrollPane();
@@ -562,7 +567,7 @@ public class MusicPlayerClient extends Application {
                 @Override
                 public void handle(ActionEvent actionEvent) {
                     try {
-                        if (songQueue.size() == 0)
+                        if (songQueue.isEmpty())
                             songQueue.add(0, allSongs.get(finalI));
                         else // if you have songs queued, and you press play a song, you replace the one you are currently playing with the chosen one,
                              // preserving rest of queue

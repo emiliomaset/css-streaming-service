@@ -2,7 +2,7 @@ package com.example.clientserverfinalproject;
 
 import java.io.*;
 
-public class SongObjectWriter {
+public class SongObjectWriter {  // used to write individual songs to songlibrary.ser
     public static void main (String[] args) throws IOException {
         sendASongToDatabase(new Song("eternal sunshine", "Ariana Grande", new File("/Users/emiliomaset/Downloads/Ariana Grande - eternal sunshine (lyric visualizer).mp3")));
     }

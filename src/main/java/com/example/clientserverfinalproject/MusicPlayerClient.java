@@ -48,6 +48,7 @@ public class MusicPlayerClient extends Application {
     private FileInputStream fileInputStream;
     private PrintWriter stringOutputStream;
 
+    private ComboBox<String> viewQueueComboBox;
     private Button addSongButton;
     private Button viewAllSongsButton;
     private Label titleOfSongCurrentlyPlayingLabel;
@@ -59,7 +60,7 @@ public class MusicPlayerClient extends Application {
     private ProgressBar songScrubber;
     private Timer timer;
     private double currentPlayingPos;
-    private Stage viewALlSongsStage;
+    private Stage viewAllSongsStage;
 
     private ArrayList<Song> allSongs = new ArrayList<>();
 
@@ -119,6 +120,15 @@ public class MusicPlayerClient extends Application {
         addSongButton.setStyle(getButtonStyling());
         addSongButton.setOnAction(e -> addSongMenuCreator());
 
+
+        viewQueueComboBox = new ComboBox<>();
+        viewQueueComboBox.getEditor().setEditable(false);
+        viewQueueComboBox.getItems().add("View queue");
+        viewQueueComboBox.getSelectionModel().selectFirst();
+        viewQueueComboBox.setStyle("-fx-font: 14px \"Helvetica\";" + getButtonStyling());
+        viewQueueComboBox.setPrefWidth(125);
+        viewQueueComboBox.setMaxWidth(125);
+
         viewAllSongsButton = new Button("View all songs in library");
         viewAllSongsButton.setFont(new Font("Helvetica", 14));
         viewAllSongsButton.setStyle(getButtonStyling());
@@ -141,7 +151,7 @@ public class MusicPlayerClient extends Application {
         imageView.setFitHeight(20);
         imageView.setFitWidth(20);
 
-        HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewAllSongsButton, imageView, volumeSlider);
+        HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewQueueComboBox, viewAllSongsButton, imageView, volumeSlider);
         buttonsHbox.setSpacing(5);
         buttonsHbox.setAlignment(Pos.CENTER);
 
@@ -198,7 +208,7 @@ public class MusicPlayerClient extends Application {
         Scene scene = new Scene(vbox);
         primaryStage.setScene(scene);
         primaryStage.setHeight(225);
-        primaryStage.setWidth(700);
+        primaryStage.setWidth(750);
         primaryStage.setResizable(false);
         primaryStage.show();
 
@@ -227,8 +237,6 @@ public class MusicPlayerClient extends Application {
             }
         });
     }
-
-    // ===========================================================================================================================
 
     public void setMediaPlayer() {
         if (mediaPlayer != null) // making sure songs dont overlap
@@ -268,6 +276,7 @@ public class MusicPlayerClient extends Application {
         }
 
         songQueue.remove(0);
+        viewQueueComboBox.getItems().remove(1);
         searchASong(songQueue.get(0).getSongTitle());
         try {
             Thread.sleep(200);
@@ -358,6 +367,7 @@ public class MusicPlayerClient extends Application {
                         throw new RuntimeException(e);
                     }
                     songQueue.remove(0);
+                    viewQueueComboBox.getItems().remove(1);
                     titleOfSongCurrentlyPlayingLabel.setText("♪ " + songQueue.get(0).getSongTitle() + " ♫");
                     artistOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getArtist());
                     prepareAndPlay();
@@ -485,8 +495,8 @@ public class MusicPlayerClient extends Application {
                     songTitleTextField.setText("");
                     artistNameTextField.setText("");
                     mp3FileTextField.setText("");
-                    if (viewALlSongsStage.isShowing()) {
-                        viewALlSongsStage.close();
+                    if (viewAllSongsStage.isShowing()) {
+                        viewAllSongsStage.close();
                         viewAllSongsMenuCreator();
                     }
 
@@ -525,8 +535,8 @@ public class MusicPlayerClient extends Application {
     public void viewAllSongsMenuCreator() {
 
         viewAllSongsButton.setDisable(true);
-        viewALlSongsStage = new Stage();
-        viewALlSongsStage.setTitle("all songs in library");
+        viewAllSongsStage = new Stage();
+        viewAllSongsStage.setTitle("all songs in library");
 
         ScrollPane viewAllSongsScrollPane = new ScrollPane();
         ArrayList<HBox> songCards = new ArrayList<>();
@@ -569,14 +579,17 @@ public class MusicPlayerClient extends Application {
                     try {
                         if (songQueue.isEmpty())
                             songQueue.add(0, allSongs.get(finalI));
-                        else // if you have songs queued, and you press play a song, you replace the one you are currently playing with the chosen one,
-                             // preserving rest of queue
+                        else { // if you have songs queued, and you press play a song, you replace the one you are currently playing with the chosen one,
+                            // preserving rest of queue
                             songQueue.set(0, allSongs.get(finalI));
+                            viewQueueComboBox.getItems().remove(1);
+                        }
 
                         searchASong(allSongs.get(finalI).getSongTitle());
                         Thread.sleep(200); // ensure time to download file
                         titleOfSongCurrentlyPlayingLabel.setText("♫ " + songQueue.get(0).getSongTitle() + " ♪");
                         artistOfSongCurrentlyPlayingLabel.setText(allSongs.get(finalI).getArtist());
+                        //viewQueueComboBox.getItems().add(allSongs.get(finalI).getSongTitle());
                         prepareAndPlay();
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -601,7 +614,10 @@ public class MusicPlayerClient extends Application {
             songCardQueueButtonList.get(i).setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent actionEvent) {
+                    if (mediaPlayer == null)
+                        return;
                     songQueue.add(allSongs.get(finalI));
+                    viewQueueComboBox.getItems().add(allSongs.get(finalI).getSongTitle());
                 }
             });
 
@@ -627,13 +643,13 @@ public class MusicPlayerClient extends Application {
 
         Scene viewAllSongsScene = new Scene(viewAllSongsScrollPane);
 
-        viewALlSongsStage.setScene(viewAllSongsScene);
-        viewALlSongsStage.setWidth(500);
-        viewALlSongsStage.setHeight(500);
-        viewALlSongsStage.setResizable(false);
-        viewALlSongsStage.show();
+        viewAllSongsStage.setScene(viewAllSongsScene);
+        viewAllSongsStage.setWidth(500);
+        viewAllSongsStage.setHeight(500);
+        viewAllSongsStage.setResizable(false);
+        viewAllSongsStage.show();
 
-        viewALlSongsStage.setOnCloseRequest(new EventHandler<WindowEvent>() {  // enable view all songs buttons once all songs window is closed
+        viewAllSongsStage.setOnCloseRequest(new EventHandler<WindowEvent>() {  // enable view all songs buttons once all songs window is closed
             @Override
             public void handle(WindowEvent windowEvent) {
                 viewAllSongsButton.setDisable(false);

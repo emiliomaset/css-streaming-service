@@ -8,7 +8,7 @@ public class MusicPlayerServer {
     private static ServerSocket serverSocket1;
     private static ServerSocket serverSocket2;
     private static ServerSocket serverSocket3;
-    private static final int PORT1 = 1433;
+    private static final int PORT1 = 1500;
     private static final int PORT2 = 2100;
     private static final int PORT3 = 3000;
 

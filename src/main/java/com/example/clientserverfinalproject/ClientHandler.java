@@ -38,7 +38,7 @@ public class ClientHandler extends Thread {
             } catch(Exception e) { // catch songlibrary.ser EOF
             }
 
-            Files.delete(Paths.get("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/songlibrary.ser/"));
+            Files.delete(Paths.get("songlibrary.ser"));
 
             objectOutputStreamToWriteToSongLibrary = new ObjectOutputStream(new FileOutputStream("songlibrary.ser", true));
 
@@ -46,7 +46,7 @@ public class ClientHandler extends Thread {
                 objectOutputStreamToWriteToSongLibrary.writeObject(song); // populating songlibrary.ser file
             }
 
-            objectOutputStreamToClient.writeObject(allSongs);
+            objectOutputStreamToClient.writeObject(allSongs); // send allSongs arraylist to client so they have a copy
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
@@ -77,7 +77,6 @@ public class ClientHandler extends Thread {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-
                     String searchedSong = stringInputFromClient.nextLine();
                     try {
                         while (true) {
@@ -108,7 +107,9 @@ public class ClientHandler extends Thread {
 
     public void sendSongToClient(Song song) throws Exception {
         int bytes = 0;
-        File file = song.getMp3File();
+
+        String filePath = song.getMp3File().toString().substring(song.getMp3File().toString().indexOf("mp3"));
+        File file = new File(filePath);
         FileInputStream fileInputStream = new FileInputStream(file);
 
         dataOutputStreamToSendFiles.writeLong(file.length());
@@ -162,11 +163,11 @@ public class ClientHandler extends Thread {
         Song song = (Song) objectInputStreamFromClient.readObject();
 
         Files.move(Path.of(file.getPath()),
-                Path.of("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/"
+                Path.of("mp3-database/"
                         + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
         // move mp3 file to mp3-database directory
 
-        song.setMp3File(new File("/Users/emiliomaset/IdeaProjects/ClientServerFinalProject/mp3-database/"
+        song.setMp3File(new File("mp3-database/"
                 + song.getSongTitle().replaceAll(" ", "").toLowerCase() + ".mp3"));
         // rename song object's mp3 file field in preparation for songblibrary.ser storage
 

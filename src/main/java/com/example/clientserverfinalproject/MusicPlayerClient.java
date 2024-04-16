@@ -5,7 +5,6 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -17,7 +16,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -35,7 +33,7 @@ import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
 
 public class MusicPlayerClient extends Application {
-    private static final int PORT1 = 1433;
+    private static final int PORT1 = 1500;
     private static final int PORT2 = 2100;
     private static final int PORT3 = 3000;
     private Socket socket1;
@@ -80,7 +78,8 @@ public class MusicPlayerClient extends Application {
             objectInputStreamFromServer = new ObjectInputStream(socket2.getInputStream());
             stringOutputStream = new PrintWriter(socket3.getOutputStream());
 
-            allSongs = (ArrayList<Song>) objectInputStreamFromServer.readObject();
+            allSongs = (ArrayList<Song>) objectInputStreamFromServer.readObject(); /* the server retrieves all songs from the songlibrary.ser file
+                                                                                    at time of client connection and sends them to client */
         } catch (UnknownHostException unknownHostException) {
             System.out.println("\nHost not found!");
             System.exit(1);
@@ -97,160 +96,18 @@ public class MusicPlayerClient extends Application {
 
     // ===========================================================================================================================
 
-    @Override
-    public void start(Stage primaryStage) throws FileNotFoundException {
-
-        Button playButton = new Button("Play");
-        playButton.setFont(new Font("Helvetica", 14));
-        playButton.setStyle(getButtonStyling());
-        playButton.setOnAction(e -> playSong());
-
-        Button pauseButton = new Button("Pause");
-        pauseButton.setFont(new Font("Helvetica", 14));
-        pauseButton.setStyle(getButtonStyling());
-        pauseButton.setOnAction(e -> pauseSong());
-
-        Button skipButton = new Button("Skip");
-        skipButton.setFont(new Font("Helvetica", 14));
-        skipButton.setStyle(getButtonStyling());
-        skipButton.setOnAction(e -> skipSong());
-
-        addSongButton = new Button("Add song");
-        addSongButton.setFont(new Font("Helvetica", 14));
-        addSongButton.setStyle(getButtonStyling());
-        addSongButton.setOnAction(e -> addSongMenuCreator());
-
-
-        viewQueueComboBox = new ComboBox<>();
-        viewQueueComboBox.getEditor().setEditable(false);
-        viewQueueComboBox.getItems().add("View queue");
-        viewQueueComboBox.getSelectionModel().selectFirst();
-        viewQueueComboBox.setStyle("-fx-font: 14px \"Helvetica\";" + getButtonStyling());
-        viewQueueComboBox.setPrefWidth(125);
-        viewQueueComboBox.setMaxWidth(125);
-
-        viewAllSongsButton = new Button("View all songs in library");
-        viewAllSongsButton.setFont(new Font("Helvetica", 14));
-        viewAllSongsButton.setStyle(getButtonStyling());
-        viewAllSongsButton.setOnAction(e -> viewAllSongsMenuCreator());
-
-        Slider volumeSlider = new Slider();
-        volumeSlider.setValue(50);
-        volumeSlider.valueProperty().addListener(new ChangeListener<Number>() { // anonymous inner class is listening for a change in
-            // Number (of the value property of the slider)
-            // this change will then run changed method
-            @Override
-            public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
-                mediaPlayer.setVolume(volumeSlider.getValue() * 0.02);
-            }
-        });
-
-        InputStream stream = new FileInputStream("volumeicon.png/");
-        Image img = new Image(stream);
-        ImageView imageView = new ImageView(img);
-        imageView.setFitHeight(20);
-        imageView.setFitWidth(20);
-
-        HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewQueueComboBox, viewAllSongsButton, imageView, volumeSlider);
-        buttonsHbox.setSpacing(5);
-        buttonsHbox.setAlignment(Pos.CENTER);
-
-        titleOfSongCurrentlyPlayingLabel = new Label("welcome back to your mp3 player!");
-        titleOfSongCurrentlyPlayingLabel.setFont(new Font("Helvetica", 30));
-
-        artistOfSongCurrentlyPlayingLabel = new Label("(◠‿◠✿)");
-        artistOfSongCurrentlyPlayingLabel.setFont(new Font("Helvetica", 22));
-
-        songScrubber = new ProgressBar();
-        songScrubber.setPrefWidth(600);
-        songScrubber.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent mouseEvent) {
-                if (mediaPlayer == null)
-                    return;
-
-                Bounds boundsOfSongScrubber = songScrubber.getBoundsInLocal();
-                double xOfSongScrubberMouseClick = mouseEvent.getSceneX();
-                double posToMoveScrubberProgressTo = (((xOfSongScrubberMouseClick - boundsOfSongScrubber.getMinX() ) * 100)
-                        / boundsOfSongScrubber.getMaxX());
-                posToMoveScrubberProgressTo -= 7.75;
-                posToMoveScrubberProgressTo /= 100;
-                songScrubber.setProgress(posToMoveScrubberProgressTo);
-                mediaPlayer.seek(Duration.millis( posToMoveScrubberProgressTo * mediaPlayer.getTotalDuration().toMillis()));
-                currentPlayingPos = posToMoveScrubberProgressTo * mediaPlayer.getTotalDuration().toMillis(); // adjust currentPlayingPos for timer
-            }
-        });
-
-        VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel);
-        labelsVbox.setSpacing(5);
-        labelsVbox.setPadding(new Insets(20));
-        labelsVbox.setAlignment(Pos.CENTER);
-
-        currentSongPosLabel = new Label();
-        currentSongPosLabel.setTextAlignment(TextAlignment.LEFT);
-        currentSongPosLabel.setFont(new Font("Helvetica", 14));
-
-        songTotalDurationLabel = new Label();
-        songTotalDurationLabel.setTextAlignment(TextAlignment.LEFT);
-        songTotalDurationLabel.setFont(new Font("Helvetica", 14));
-
-        HBox songDurationAndSongScrubberHbox = new HBox(currentSongPosLabel, songScrubber, songTotalDurationLabel);
-        songDurationAndSongScrubberHbox.setAlignment(Pos.CENTER);
-        songDurationAndSongScrubberHbox.setSpacing(12);
-
-        VBox progressBarAndButtonsVBox = new VBox(songDurationAndSongScrubberHbox, buttonsHbox);
-        progressBarAndButtonsVBox.setSpacing(28);
-
-        VBox vbox = new VBox(labelsVbox, progressBarAndButtonsVBox);
-        vbox.setBackground(Background.fill(Color.rgb(179, 220, 234)));
-        vbox.setSpacing(0);
-
-        Scene scene = new Scene(vbox);
-        primaryStage.setScene(scene);
-        primaryStage.setHeight(225);
-        primaryStage.setWidth(750);
-        primaryStage.setResizable(false);
-        primaryStage.show();
-
-        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
-            @Override
-            public void handle(WindowEvent windowEvent) {
-                try {
-                    if (new File("dummy2.mp3").exists())
-                        new File("dummy2.mp3").delete();
-
-                    if (new File("songcurrentlyplaying.mp3").exists())
-                        new File("songcurrentlyplaying.mp3").delete();
-
-                    dataOutputStream.close();
-                    objectOutputStreamToServer.close();
-                    objectInputStreamFromServer.close();
-                    stringOutputStream.close();
-                    dataInputStreamToReceiveFiles.close();
-                    fileInputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    Platform.exit();
-                    System.exit(1);
-                }
-            }
-        });
-    }
-
     public void setMediaPlayer() {
         if (mediaPlayer != null) // making sure songs dont overlap
             mediaPlayer.pause();
 
         if (new File("dummy2.mp3").exists()) {
             try {
-                FileUtils.copyFile(new File("dummy2.mp3"), new File("songcurrentlyplaying.mp3"));
+                FileUtils.copyFile(new File("dummy2.mp3"), new File("songcurrentlyplaying.mp3")); // creates a file with current song data in it
                 Media hit = new Media(new File("songcurrentlyplaying.mp3").toURI().toString());
                 mediaPlayer = new MediaPlayer(hit);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
         }
     }
 
@@ -283,14 +140,14 @@ public class MusicPlayerClient extends Application {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        titleOfSongCurrentlyPlayingLabel.setText("♫ " + songQueue.get(0).getSongTitle() + " ♪");
-        artistOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getArtist());
         prepareAndPlay();
     }
 
     // ===========================================================================================================================
 
     public void prepareAndPlay() {
+        titleOfSongCurrentlyPlayingLabel.setText("♫ " + songQueue.get(0).getSongTitle() + " ♪");
+        artistOfSongCurrentlyPlayingLabel.setText(songQueue.get(0).getArtist());
         setMediaPlayer();
         playSong();
         setTimer();
@@ -425,8 +282,190 @@ public class MusicPlayerClient extends Application {
 
     // ===========================================================================================================================
 
+    @Override
+    public void start(Stage primaryStage) throws FileNotFoundException {
+
+        Button playButton = new Button("play");
+        playButton.setFont(new Font("Helvetica", 14));
+        playButton.setStyle(getButtonStyling());
+        playButton.setOnAction(e -> playSong());
+
+        Button pauseButton = new Button("pause");
+        pauseButton.setFont(new Font("Helvetica", 14));
+        pauseButton.setStyle(getButtonStyling());
+        pauseButton.setOnAction(e -> pauseSong());
+
+        Button skipButton = new Button("skip");
+        skipButton.setFont(new Font("Helvetica", 14));
+        skipButton.setStyle(getButtonStyling());
+        skipButton.setOnAction(e -> skipSong());
+
+        addSongButton = new Button("add song");
+        addSongButton.setFont(new Font("Helvetica", 14));
+        addSongButton.setStyle(getButtonStyling());
+        addSongButton.setOnAction(e -> addSongMenuCreator());
+
+
+        viewQueueComboBox = new ComboBox<>();
+        viewQueueComboBox.getItems().add("view queue");
+        viewQueueComboBox.getSelectionModel().selectFirst(); // make "view queue" the face of the combo box
+        viewQueueComboBox.setStyle("-fx-font: 14px \"Helvetica\";" + getButtonStyling());
+        viewQueueComboBox.setPrefWidth(125);
+        viewQueueComboBox.setMaxWidth(125);
+        viewQueueComboBox.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                try {
+                    if (viewQueueComboBox.getSelectionModel().isSelected(0)) { /* since "view queue" is selected again at the end of the handle method,
+                                                                                   this just makes sure nothing is done when that happens */
+                        return;
+                    }
+
+                    int indexOfSongSkippedTo = 0;
+                    while (allSongs.get(indexOfSongSkippedTo).getSongTitle()
+                            != viewQueueComboBox.getSelectionModel().getSelectedItem()) // find index of song skipped to in allSongs
+                        indexOfSongSkippedTo++;
+
+                    searchASong(allSongs.get(indexOfSongSkippedTo).getSongTitle());
+                    Thread.sleep(200); // ensure time to download file
+
+                    for (int i = 0; i < viewQueueComboBox.getSelectionModel().getSelectedIndex(); i++) { // remove songs in queue up to chosen one
+                        songQueue.remove(0);
+                    }
+
+                    prepareAndPlay();
+
+                    int selectedComboBoxIndexWithoutChange = viewQueueComboBox.getSelectionModel().getSelectedIndex(); /* since the index of the selected item changes
+                                                                                                                          as you remove items from the combo box,
+                                                                                                                          i had to keep it constant to remove items */
+
+                    for (int i = 0; i < selectedComboBoxIndexWithoutChange; i++) { // adjust combo box items accordingly
+                        viewQueueComboBox.getItems().remove(1);
+                    }
+
+                    viewQueueComboBox.getSelectionModel().selectFirst();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        viewAllSongsButton = new Button("view all songs in library");
+        viewAllSongsButton.setFont(new Font("Helvetica", 14));
+        viewAllSongsButton.setStyle(getButtonStyling());
+        viewAllSongsButton.setOnAction(e -> viewAllSongsMenuCreator());
+
+        Slider volumeSlider = new Slider();
+        volumeSlider.setValue(50);
+        volumeSlider.valueProperty().addListener(new ChangeListener<Number>() { /* anonymous inner class is listening for a change in
+                                                                                   Number (of the value property of the slider)
+                                                                                   this change will then run changed method */
+            @Override
+            public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
+                mediaPlayer.setVolume(volumeSlider.getValue() * 0.02);
+            }
+        });
+
+        InputStream stream = new FileInputStream("volumeicon.png/");
+        Image img = new Image(stream);
+        ImageView imageView = new ImageView(img);
+        imageView.setFitHeight(20);
+        imageView.setFitWidth(20);
+
+        HBox buttonsHbox = new HBox(playButton, pauseButton, skipButton, addSongButton, viewQueueComboBox, viewAllSongsButton, imageView, volumeSlider);
+        buttonsHbox.setSpacing(5);
+        buttonsHbox.setAlignment(Pos.CENTER);
+
+        titleOfSongCurrentlyPlayingLabel = new Label("welcome back to your mp3 player!");
+        titleOfSongCurrentlyPlayingLabel.setFont(new Font("Helvetica", 30));
+
+        artistOfSongCurrentlyPlayingLabel = new Label("(◠‿◠✿)");
+        artistOfSongCurrentlyPlayingLabel.setFont(new Font("Helvetica", 22));
+
+        songScrubber = new ProgressBar();
+        songScrubber.setPrefWidth(600);
+        songScrubber.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) { // allows user to seek song with progress bar
+                if (mediaPlayer == null)
+                    return;
+
+                Bounds boundsOfSongScrubber = songScrubber.getBoundsInLocal();
+
+                double xOfSongScrubberMouseClick = mouseEvent.getSceneX();
+                double posToMoveScrubberProgressTo = (((xOfSongScrubberMouseClick - boundsOfSongScrubber.getMinX() ) * 100)
+                        / boundsOfSongScrubber.getMaxX());
+                posToMoveScrubberProgressTo -= 11.95;
+                posToMoveScrubberProgressTo /= 100;
+
+                songScrubber.setProgress(posToMoveScrubberProgressTo);
+                mediaPlayer.seek(Duration.millis( posToMoveScrubberProgressTo * mediaPlayer.getTotalDuration().toMillis()));
+                currentPlayingPos = posToMoveScrubberProgressTo * mediaPlayer.getTotalDuration().toMillis(); // adjust currentPlayingPos for timer
+            }
+        });
+
+        VBox labelsVbox = new VBox(titleOfSongCurrentlyPlayingLabel, artistOfSongCurrentlyPlayingLabel);
+        labelsVbox.setSpacing(5);
+        labelsVbox.setPadding(new Insets(20));
+        labelsVbox.setAlignment(Pos.CENTER);
+
+        currentSongPosLabel = new Label();
+        currentSongPosLabel.setTextAlignment(TextAlignment.LEFT);
+        currentSongPosLabel.setFont(new Font("Helvetica", 14));
+
+        songTotalDurationLabel = new Label();
+        songTotalDurationLabel.setTextAlignment(TextAlignment.LEFT);
+        songTotalDurationLabel.setFont(new Font("Helvetica", 14));
+
+        HBox songDurationAndSongScrubberHbox = new HBox(currentSongPosLabel, songScrubber, songTotalDurationLabel);
+        songDurationAndSongScrubberHbox.setAlignment(Pos.CENTER);
+        songDurationAndSongScrubberHbox.setSpacing(12);
+
+        VBox progressBarAndButtonsVBox = new VBox(songDurationAndSongScrubberHbox, buttonsHbox);
+        progressBarAndButtonsVBox.setSpacing(28);
+
+        VBox vbox = new VBox(labelsVbox, progressBarAndButtonsVBox);
+        vbox.setBackground(Background.fill(Color.rgb(179, 220, 234)));
+        vbox.setSpacing(0);
+
+        Scene scene = new Scene(vbox);
+        primaryStage.setScene(scene);
+        primaryStage.setHeight(225);
+        primaryStage.setWidth(750);
+        primaryStage.setResizable(false);
+        primaryStage.show();
+
+        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent windowEvent) {
+                try {
+                    if (new File("dummy2.mp3").exists())
+                        new File("dummy2.mp3").delete();
+
+                    if (new File("songcurrentlyplaying.mp3").exists())
+                        new File("songcurrentlyplaying.mp3").delete();
+
+                    dataOutputStream.close();
+                    objectOutputStreamToServer.close();
+                    objectInputStreamFromServer.close();
+                    stringOutputStream.close();
+                    dataInputStreamToReceiveFiles.close();
+                    fileInputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    Platform.exit();
+                    System.exit(1);
+                }
+            }
+        });
+    }
+
+    // ===========================================================================================================================================
+
     public void addSongMenuCreator() {
         addSongButton.setDisable(true);
+
         Stage addSongStage = new Stage();
         addSongStage.setTitle("add song to library");
 
@@ -447,6 +486,7 @@ public class MusicPlayerClient extends Application {
         addSongButtonInAddSongWindow.setFont(Font.font("Helvetica", 14));
 
         Label messageSentLabel = new Label();
+        messageSentLabel.setFont(Font.font("Helvetica", 16));
 
         TextField songTitleTextField = new TextField();
         TextField artistNameTextField = new TextField();
@@ -460,6 +500,7 @@ public class MusicPlayerClient extends Application {
 
                 FileChooser mp3FileChooser = new FileChooser();
                 mp3FileChosenByUser = mp3FileChooser.showOpenDialog(addSongStage);
+
                 if (!mp3FileChosenByUser.toString().contains(".mp3")) {
                     messageSentLabel.setBorder(Border.stroke(Color.RED));
                     messageSentLabel.setText("file must be an .mp3!");
@@ -490,12 +531,14 @@ public class MusicPlayerClient extends Application {
                         messageSentLabel.setBorder(Border.stroke(Color.RED));
                         return;
                     }
+
                     sendSong(new Song(songTitleTextField.getText().trim(), artistNameTextField.getText().trim(), mp3FileChosenByUser));
                     messageSentLabel.setText("song successfully added to library!");
                     songTitleTextField.setText("");
                     artistNameTextField.setText("");
                     mp3FileTextField.setText("");
-                    if (viewAllSongsStage.isShowing()) {
+
+                    if (viewAllSongsStage != null && viewAllSongsStage.isShowing()) { // close and reopen all songs window if its showing upon adding a new song to library
                         viewAllSongsStage.close();
                         viewAllSongsMenuCreator();
                     }
@@ -507,14 +550,14 @@ public class MusicPlayerClient extends Application {
             }
         });
 
-        VBox vBox = new VBox(songTitleLabelAndButtonHbox, artistNameLabelandTextFieldHbox, mp3FileLabelAndTextFieldHbox,
+        VBox everythingVbox = new VBox(songTitleLabelAndButtonHbox, artistNameLabelandTextFieldHbox, mp3FileLabelAndTextFieldHbox,
                 addSongButtonInAddSongWindow, messageSentLabel);
-        vBox.setPadding(new Insets(15));
-        vBox.setSpacing(20);
-        vBox.setAlignment(Pos.CENTER);
-        vBox.setBackground(Background.fill(Color.valueOf("#E8DFD6")));
+        everythingVbox.setPadding(new Insets(15));
+        everythingVbox.setSpacing(20);
+        everythingVbox.setAlignment(Pos.CENTER);
+        everythingVbox.setBackground(Background.fill(Color.valueOf("#E8DFD6")));
 
-        Scene addSongScene = new Scene(vBox);
+        Scene addSongScene = new Scene(everythingVbox);
 
         addSongStage.setScene(addSongScene);
         addSongStage.setWidth(300);
@@ -572,24 +615,20 @@ public class MusicPlayerClient extends Application {
             songCardQueueButtonList.get(i).setFont(Font.font("Helvetica", 13));
             songCardQueueButtonList.get(i).setStyle(getButtonStyling());
 
-            int finalI = i;
+            int finalI = i; // redeclaration so that i can be accessed in inner classes
             songCardPlayButtonList.get(i).setOnAction(new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent actionEvent) {
                     try {
                         if (songQueue.isEmpty())
                             songQueue.add(0, allSongs.get(finalI));
-                        else { // if you have songs queued, and you press play a song, you replace the one you are currently playing with the chosen one,
-                            // preserving rest of queue
+
+                        else /* if you have songs queued, and you press play a song, you replace the one you are currently
+                                playing with the chosen one, preserving rest of queue */
                             songQueue.set(0, allSongs.get(finalI));
-                            viewQueueComboBox.getItems().remove(1);
-                        }
 
                         searchASong(allSongs.get(finalI).getSongTitle());
                         Thread.sleep(200); // ensure time to download file
-                        titleOfSongCurrentlyPlayingLabel.setText("♫ " + songQueue.get(0).getSongTitle() + " ♪");
-                        artistOfSongCurrentlyPlayingLabel.setText(allSongs.get(finalI).getArtist());
-                        //viewQueueComboBox.getItems().add(allSongs.get(finalI).getSongTitle());
                         prepareAndPlay();
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -603,8 +642,15 @@ public class MusicPlayerClient extends Application {
                     try {
                         searchASong(allSongs.get(finalI).getSongTitle());
                         Thread.sleep(100);
+
                         File songFileToDownload = new File("dummy2.mp3");
-                        songFileToDownload.renameTo(new File(allSongs.get(finalI).getSongTitle() + "download.mp3"));
+                        File downloadedSongsDirectory = new File("songs-downloaded-from-mp3-player");
+
+                        if (!downloadedSongsDirectory.exists()) {
+                            downloadedSongsDirectory.mkdir();
+                        }
+
+                        songFileToDownload.renameTo(new File("songs-downloaded-from-mp3-player/" + allSongs.get(finalI).getSongTitle() + "download.mp3"));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -623,6 +669,7 @@ public class MusicPlayerClient extends Application {
 
             songCardButtonsHBox.add(new HBox(songCardPlayButtonList.get(i), songCardDownloadButtonList.get(i), songCardQueueButtonList.get(i)));
             songCardButtonsHBox.get(i).setSpacing(9);
+
             songCards.add(new HBox(songCardTitleAndArtistLabelList.get(i), songCardButtonsHBox.get(i)));
             songCards.get(i).setSpacing(20);
         }
@@ -659,8 +706,8 @@ public class MusicPlayerClient extends Application {
 
     // ===========================================================================================================================
 
-    public String getButtonStyling() { // this portion of code copied from
-                                       // http://fxexperience.com/2011/12/styling-fx-buttons-with-css/
+    public String getButtonStyling() { /* this portion of code copied from
+                                          http://fxexperience.com/2011/12/styling-fx-buttons-with-css/ */
         return "-fx-background-color: \n" +
                 "        linear-gradient(#f2f2f2, #d6d6d6),\n" +
                 "        linear-gradient(#fcfcfc 0%, #d9d9d9 20%, #d6d6d6 100%),\n" +
